@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.8</version>
+        <version>3.5.9</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.ylh</groupId>
@@ -28,16 +28,34 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <!-- 集中管理 Spring Boot BOM 未托管的三方库版本 -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <mybatis-spring-boot.version>3.0.5</mybatis-spring-boot.version>
+        <knife4j.version>4.5.0</knife4j.version>
+        <hutool.version>5.8.38</hutool.version>
     </properties>
+
+    <!-- 统一版本仲裁：导入 MyBatis-Plus BOM，让其所有子模块版本对齐 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-bom</artifactId>
+                <version>${mybatis-plus.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>4.0.1</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
         <dependency>
@@ -58,15 +76,35 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter-test</artifactId>
-            <version>4.0.1</version>
+            <version>${mybatis-spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- MyBatis-Plus文档：https://baomidou.com/introduce/ -->
+        <!-- 版本由上方 mybatis-plus-bom 统一管理，此处无需写 version -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <!--工具库文档：https://doc.hutool.cn/pages/ai/ -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>${hutool.version}</version>
+        </dependency>
+        <!--knife4j文档：https://doc.xiaominfo.com/docs/quick-start -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <version>${knife4j.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
