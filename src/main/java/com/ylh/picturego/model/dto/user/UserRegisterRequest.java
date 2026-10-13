@@ -1,4 +1,4 @@
-package com.ylh.picturego.model.dto;
+package com.ylh.picturego.model.dto.user;
 
 import lombok.Data;
 

@@ -1,11 +1,16 @@
 package com.ylh.picturego.service;
 
-import com.ylh.picturego.model.dto.UserLoginRequest;
-import com.ylh.picturego.model.dto.UserRegisterRequest;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.ylh.picturego.model.dto.user.UserLoginRequest;
+import com.ylh.picturego.model.dto.user.UserQueryRequest;
+import com.ylh.picturego.model.dto.user.UserRegisterRequest;
 import com.ylh.picturego.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ylh.picturego.model.vo.LoginUserVO;
+import com.ylh.picturego.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
 
 /**
 * @author V0411
@@ -42,9 +47,40 @@ public interface UserService extends IService<User> {
     LoginUserVO getLoginUserVO(User user);
 
     /**
+     * 获取脱敏用户信息
+     *
+     * @param user
+     * @return 用户信息
+     */
+    UserVO getUserVO(User user);
+
+    /**
+     * 获取脱敏用户信息列表
+     *
+     * @param userList
+     * @return 用户信息
+     */
+    List<UserVO> getUsersVOList(List<User> userList);
+
+    /**
+     * 加密密码
+     * @param password
+     * @return 加密后的密码
+     */
+    String getEncryptPassword(String password);
+
+    /**
      * 用户注销
      * @param request
      * @return 注销结果
      */
     boolean userLogout(HttpServletRequest request);
+
+    /**
+     * 获取查询条件
+     *
+     * @param userQueryRequest
+     * @return 查询条件
+     */
+    QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
 }

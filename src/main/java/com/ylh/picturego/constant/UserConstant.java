@@ -19,4 +19,14 @@ public interface UserConstant {
     String ADMIN_ROLE = "admin";
 
     // endregion
+
+    /**
+     * 默认用户名
+     */
+    String DEFAULT_USER_NAME = "user";
+
+    /**
+     * 默认用户密码
+     */
+    String DEFAULT_USER_PASSWORD = "password";
 }

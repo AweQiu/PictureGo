@@ -8,15 +8,16 @@ import lombok.Getter;
  */
 @Getter
 public enum UserRoleEnum {
-    ADMIN("admin", "管理员"),
-    USER("user", "普通用户");
-
+    ADMIN("管理员", "admin", 10),
+    USER("普通用户", "user", 1);
     private final String text;
     private final String value;
+    private final int level;  // 角色等级，数字越大权限越高
 
-    UserRoleEnum(String text, String value) {
+    UserRoleEnum(String text, String value, int level) {
         this.text = text;
         this.value = value;
+        this.level = level;
     }
 
     /**

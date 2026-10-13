@@ -1,6 +1,8 @@
 package com.ylh.picturego.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -8,15 +10,20 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
-import com.ylh.picturego.model.dto.UserLoginRequest;
-import com.ylh.picturego.model.dto.UserRegisterRequest;
+import com.ylh.picturego.model.dto.user.UserLoginRequest;
+import com.ylh.picturego.model.dto.user.UserQueryRequest;
+import com.ylh.picturego.model.dto.user.UserRegisterRequest;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.LoginUserVO;
+import com.ylh.picturego.model.vo.UserVO;
 import com.ylh.picturego.service.UserService;
 import com.ylh.picturego.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
 * @author V0411
@@ -40,8 +47,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("userAccount", userRegisterRequest.getUserAccount());
         ThrowUtils.throwException(this.baseMapper.selectCount(queryWrapper) > 0, ErrorCode.PARAMS_ERROR, "用户账号已存在");
         // 密码加密
-        String encryptedPassword = userRegisterRequest.getUserPassword();
-        encryptedPassword = DigestUtil.md5Hex(encryptedPassword + "PasswordSalt");
+        String encryptedPassword = this.getEncryptPassword(userRegisterRequest.getUserPassword());
         // 保存用户
         User user = new User();
         user.setUserAccount(userRegisterRequest.getUserAccount());
@@ -96,6 +102,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtil.copyProperties(user, userVO);
+        return userVO;
+    }
+
+    @Override
+    public List<UserVO> getUsersVOList(List<User> userList) {
+        if (CollUtil.isEmpty(userList)) {
+            return null;
+        }
+        // 转换用户信息
+        return userList.stream()
+                .map(this::getUserVO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public String getEncryptPassword(String password) {
+        // 密码加盐摘要
+        return DigestUtil.md5Hex(password + "PasswordSalt");
+    }
+
+    @Override
     public boolean userLogout(HttpServletRequest request) {
         // 判断是否登录
         Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
@@ -103,6 +136,29 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 移除登录态
         request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
         return true;
+    }
+
+    @Override
+    public QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest) {
+        ThrowUtils.throwException(userQueryRequest == null, ErrorCode.PARAMS_ERROR, "请求参数为空");
+        Long id = userQueryRequest.getId();
+        String userName = userQueryRequest.getUserName();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        int current = userQueryRequest.getCurrent();
+        int pageSize = userQueryRequest.getPageSize();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(ObjUtil.isNotNull(id), "id", id);
+        queryWrapper.like(StrUtil.isNotBlank(userAccount), "userAccount", userAccount);
+        queryWrapper.like(StrUtil.isNotBlank(userName), "userName", userName);
+        queryWrapper.like(StrUtil.isNotBlank(userProfile), "userProfile", userProfile);
+        queryWrapper.eq(StrUtil.isNotBlank(userRole), "userRole", userRole);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("asc"), sortField);
+        return queryWrapper;
     }
 }
 
