@@ -1,6 +1,6 @@
 package com.ylh.picturego.mapper;
 
-import com.ylh.picturego.entity.User;
+import com.ylh.picturego.model.entity.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

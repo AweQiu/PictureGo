@@ -6,9 +6,9 @@ spring:
     password: 1234
 
 server:
-  port: 8880
+  port: 8080
   servlet:
-    context-path: /picturego
+    context-path: /picgo
 
 mybatis-plus:
   configuration:
@@ -39,4 +39,3 @@ knife4j:
   enable: true
   setting:
     language: zh-CN
-
