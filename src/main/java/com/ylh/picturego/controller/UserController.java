@@ -142,7 +142,7 @@ public class UserController {
         User user = new User();
         BeanUtil.copyProperties(userUpdateRequest, user);
         boolean result = userService.updateById(user);
-        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "用户更新失败");
+        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "用户编辑失败");
         return ResultUtils.success(result);
     }
 
