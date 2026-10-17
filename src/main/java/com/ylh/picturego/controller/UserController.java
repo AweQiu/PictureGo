@@ -56,7 +56,7 @@ public class UserController {
      */
     @GetMapping("/get/login")
     public Result<LoginUserVO> getLoginUser(HttpServletRequest request) {
-        return ResultUtils.success(userService.getLoginUserVO(userService.getLoginUser(request)));
+        return ResultUtils.success(LoginUserVO.objToLoginVO(userService.getLoginUser(request)));
     }
 
     /**
@@ -72,7 +72,8 @@ public class UserController {
 
     /**
      * 添加用户
-     * @return 新用户ID
+     * @param userAddRequest 添加用户请求
+     * @return 添加结果
      */
     @PostMapping("/add")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -91,7 +92,7 @@ public class UserController {
 
     /**
      * 根据ID获取用户（管理员）
-     * @param id
+      * @param id 用户ID
      * @return 用户
      */
     @GetMapping("/get")
@@ -105,7 +106,7 @@ public class UserController {
 
     /**
      * 根据ID获取用户VO（普通用户）
-     * @param id
+      * @param id 用户ID
      * @return 用户VO
      */
     @GetMapping("/get/vo")
@@ -113,12 +114,12 @@ public class UserController {
         Result<User> result = getUserById(id);
         User user = result.getData();
         // 返回脱敏用户信息
-        return ResultUtils.success(userService.getUserVO(user));
+        return ResultUtils.success(UserVO.objToVo(user));
     }
 
     /**
      * 删除用户
-     * @param deleteRequest
+      * @param deleteRequest 删除请求
      * @return 是否删除成功
      */
     @PostMapping("/delete")
@@ -132,7 +133,7 @@ public class UserController {
 
     /**
      * 更新用户
-     * @param userUpdateRequest
+      * @param userUpdateRequest 更新请求
      * @return 是否更新成功
      */
     @PostMapping("/update")
@@ -148,7 +149,7 @@ public class UserController {
 
     /**
      * 获取用户列表
-     * @return 用户列表
+      * @param userQueryRequest 查询请求
      */
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -162,7 +163,7 @@ public class UserController {
         // 传递分页元信息（当前页、每页条数、总条数）
         Page<UserVO> userVOPage = new Page<>(current, pageSize, userPage.getTotal());
         // 转换用户信息为用户VO
-        List<UserVO> userVOList = userService.getUsersVOList(userPage.getRecords());
+        List<UserVO> userVOList = UserVO.listToVoList(userPage.getRecords());
         // 设置分页数据（用户VO列表）
         userVOPage.setRecords(userVOList);
         return ResultUtils.success(userVOPage);

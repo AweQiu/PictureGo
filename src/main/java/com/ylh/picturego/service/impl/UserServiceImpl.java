@@ -1,7 +1,6 @@
 package com.ylh.picturego.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
@@ -15,15 +14,11 @@ import com.ylh.picturego.model.dto.user.UserQueryRequest;
 import com.ylh.picturego.model.dto.user.UserRegisterRequest;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.LoginUserVO;
-import com.ylh.picturego.model.vo.UserVO;
 import com.ylh.picturego.service.UserService;
 import com.ylh.picturego.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
 * @author V0411
@@ -49,11 +44,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 密码加密
         String encryptedPassword = this.getEncryptPassword(userRegisterRequest.getUserPassword());
         // 保存用户
-        User user = new User();
-        user.setUserAccount(userRegisterRequest.getUserAccount());
-        user.setUserPassword(encryptedPassword);
-        this.save(user);
-        return user.getId();
+        User newUser = User.builder()
+                .userAccount(userRegisterRequest.getUserAccount())
+                .userPassword(encryptedPassword)
+                .build();
+        this.save(newUser);
+        return newUser.getId();
     }
 
     @Override
@@ -76,7 +72,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         ThrowUtils.throwException(user == null, ErrorCode.PARAMS_ERROR, "用户不存在或账号或密码错误");
         // 保存登录态
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
-        return this.getLoginUserVO(user);
+        return LoginUserVO.objToLoginVO(user);
     }
 
     @Override
@@ -89,37 +85,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         currentUser = this.getById(currentUser.getId());
         ThrowUtils.throwException(currentUser == null, ErrorCode.NOT_LOGIN_ERROR);
         return currentUser;
-    }
-
-    @Override
-    public LoginUserVO getLoginUserVO(User user) {
-        if (user == null) {
-            return null;
-        }
-        LoginUserVO loginUserVO = new LoginUserVO();
-        BeanUtil.copyProperties(user, loginUserVO);
-        return loginUserVO;
-    }
-
-    @Override
-    public UserVO getUserVO(User user) {
-        if (user == null) {
-            return null;
-        }
-        UserVO userVO = new UserVO();
-        BeanUtil.copyProperties(user, userVO);
-        return userVO;
-    }
-
-    @Override
-    public List<UserVO> getUsersVOList(List<User> userList) {
-        if (CollUtil.isEmpty(userList)) {
-            return null;
-        }
-        // 转换用户信息
-        return userList.stream()
-                .map(this::getUserVO)
-                .collect(Collectors.toList());
     }
 
     @Override

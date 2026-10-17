@@ -1,6 +1,11 @@
 package com.ylh.picturego.model.vo;
 
+import cn.hutool.core.bean.BeanUtil;
+import com.ylh.picturego.model.entity.User;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -9,6 +14,9 @@ import java.util.Date;
  * 登录用户视图
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginUserVO implements Serializable {
 
     /**
@@ -57,4 +65,18 @@ public class LoginUserVO implements Serializable {
     private Date updateTime;
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 将用户对象转换为登录用户视图对象
+     * @param user 用户对象
+     * @return 登录用户视图对象
+     */
+    public static LoginUserVO objToLoginVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtil.copyProperties(user, loginUserVO);
+        return loginUserVO;
+    }
 }

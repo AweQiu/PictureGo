@@ -3,7 +3,11 @@ package com.ylh.picturego.model.entity;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.util.Date;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 用户表
@@ -11,6 +15,9 @@ import lombok.Data;
  */
 @TableName(value ="user")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
     /**
      * 唯一标识

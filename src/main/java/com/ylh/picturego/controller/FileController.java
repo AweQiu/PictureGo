@@ -1,7 +1,6 @@
 package com.ylh.picturego.controller;
 
 
-import com.qcloud.cos.COS;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
@@ -11,7 +10,6 @@ import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
-import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.CosManager;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +28,11 @@ public class FileController {
     @Resource
     private CosManager cosManager;
 
+    /**
+     * 上传文件
+     * @param multipartFile 文件对象
+     * @return 可访问路径
+     */
     @PostMapping("/upload")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public Result<String> uploadFile(@RequestPart("file") MultipartFile multipartFile) {
@@ -59,6 +62,12 @@ public class FileController {
         }
     }
 
+    /**
+     * 下载文件
+     * @param filePath 文件路径
+     * @param response 响应对象
+     * @throws IOException
+     */
     @GetMapping("/download")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public void downloadFile(String filePath, HttpServletResponse response) throws IOException {
@@ -83,7 +92,5 @@ public class FileController {
             if (cosObjectInputStream != null)
                 cosObjectInputStream.close();
         }
-
-
     }
 }
