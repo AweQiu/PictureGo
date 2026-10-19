@@ -34,7 +34,7 @@ public class FileManager {
     private CosClientConfig cosClientConfig;
 
     /**
-     * 上传图片
+     * 上传图片到对象存储
      * @param multipartFile 文件
      * @param uploadPathPrefix 上传路径前缀
      * @return 上传结果
@@ -92,7 +92,7 @@ public class FileManager {
         // 校验文件大小
         long fileSize = multipartFile.getSize();
         final long ONE_M = 1024 * 1024;
-        ThrowUtils.throwException(fileSize > 2 * ONE_M, ErrorCode.PARAMS_ERROR, "文件大小不能超过 2M");
+        ThrowUtils.throwException(fileSize > 5 * ONE_M, ErrorCode.PARAMS_ERROR, "文件大小不能超过 5M");
         // 校验文件后缀
         String fileSuffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
         final List<String> ALLOWED_FORMATS = Arrays.asList("png", "jpg", "jpeg", "gif");

@@ -29,7 +29,7 @@ public class FileController {
     private CosManager cosManager;
 
     /**
-     * 上传文件
+     * 上传文件到对象存储（测试）
      * @param multipartFile 文件对象
      * @return 可访问路径
      */
@@ -38,7 +38,6 @@ public class FileController {
     public Result<String> uploadFile(@RequestPart("file") MultipartFile multipartFile) {
         String fileName = multipartFile.getOriginalFilename();
         String filePath = String.format("/test/%s", fileName);
-
         // 创建临时文件空对象，用于保存上传的文件
         File tempFile = null;
         try {

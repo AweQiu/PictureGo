@@ -1,10 +1,20 @@
 package com.ylh.picturego.controller;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ylh.picturego.annotation.AuthCheck;
+import com.ylh.picturego.common.DeleteRequest;
 import com.ylh.picturego.common.Result;
 import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
+import com.ylh.picturego.exception.ErrorCode;
+import com.ylh.picturego.exception.ThrowUtils;
+import com.ylh.picturego.model.dto.picture.PictureEditRequest;
+import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
+import com.ylh.picturego.model.dto.picture.PictureUpdateRequest;
 import com.ylh.picturego.model.dto.picture.PictureUploadRequest;
+import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.service.PictureService;
@@ -27,11 +37,10 @@ public class PictureController {
     private PictureService pictureService;
 
     /**
-     * 上传图片（可重新上传）
-     *
+     * 上传图片到数据库和对象存储（可重复上传）
      * @param file 文件分片
      * @param pictureUploadRequest 图片上传请求
-     * @param request  请求
+     * @param request 请求
      * @return 图片信息
      */
     @PostMapping("/upload")
@@ -39,9 +48,168 @@ public class PictureController {
     public Result<PictureVO> uploadPicture(
             @RequestPart MultipartFile file,
             PictureUploadRequest pictureUploadRequest,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(file, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
     }
+
+    /**
+     * 删除图片
+     * @param deleteRequest 删除请求
+     * @param request 请求
+     * @return 是否删除成功
+     */
+    @PostMapping("/delete")
+    public Result<Boolean> deletePicture(
+            @RequestBody DeleteRequest deleteRequest,
+            HttpServletRequest request
+    ) {
+        ThrowUtils.throwException(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
+        Long id = deleteRequest.getId();
+        User loginUser = userService.getLoginUser(request);
+        Picture oldPicture = pictureService.getById(id);
+        // 存在性校验
+        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 权限校验，仅允许本人或管理员
+        ThrowUtils.throwException(
+                !oldPicture.getUserId().equals(loginUser.getId()) &&
+                !loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE),
+                ErrorCode.OPERATION_ERROR, "无权限删除"
+        );
+        // 删除图片
+        boolean result = pictureService.removeById(id);
+        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片删除失败");
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * 更新图片（管理员）
+     * @param pictureUpdateRequest 图片更新请求
+     * @return 是否更新成功
+     */
+    @PostMapping("/update")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public Result<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+        ThrowUtils.throwException(pictureUpdateRequest == null, ErrorCode.PARAMS_ERROR);
+        // DTO类转实体类
+        Picture picture = new Picture();
+        BeanUtil.copyProperties(pictureUpdateRequest, picture);
+        // List列表转String
+        picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));
+        // 校验图片
+        pictureService.validPicture(picture);
+        // 存在性校验
+        long id = pictureUpdateRequest.getId();
+        Picture oldPicture = pictureService.getById(id);
+        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 操作数据库
+        boolean result = pictureService.updateById(picture);
+        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片更新失败");
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * 编辑图片（用户）
+     * @param pictureEditRequest 图片编辑请求
+     * @param request 请求
+     * @return 是否编辑成功
+     */
+    @PostMapping("/edit")
+    public Result<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
+        ThrowUtils.throwException(pictureEditRequest == null || pictureEditRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
+        // DTO类转实体类
+        Picture picture = new Picture();
+        BeanUtil.copyProperties(pictureEditRequest, picture);
+        // List列表转String
+        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
+        // 校验图片
+        pictureService.validPicture(picture);
+        User loginUser = userService.getLoginUser(request);
+        // 存在性校验
+        long id = pictureEditRequest.getId();
+        Picture oldPicture = pictureService.getById(id);
+        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 权限校验，仅允许本人或管理员
+        ThrowUtils.throwException(
+                !oldPicture.getUserId().equals(loginUser.getId()) &&
+                !loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE),
+                ErrorCode.OPERATION_ERROR, "无权限编辑"
+        );
+        // 操作数据库
+        boolean result = pictureService.updateById(picture);
+        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片编辑失败");
+        return ResultUtils.success(true);
+    }
+
+    /**
+     * 根据ID获取图片
+     * @param id 图片ID
+     * @return 图片
+     */
+    @GetMapping("/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public Result<Picture> getPictureById(@RequestParam Long id) {
+        ThrowUtils.throwException(id <= 0, ErrorCode.PARAMS_ERROR, "图片ID有误");
+        // 查询数据库
+        Picture picture = pictureService.getById(id);
+        ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        return ResultUtils.success(picture);
+    }
+
+    /**
+     * 根据ID获取图片VO
+     * @param id 图片ID
+     * @return 图片VO
+     */
+    @GetMapping("/get/vo")
+    public Result<PictureVO> getPictureVOById(@RequestParam Long id, HttpServletRequest request) {
+        ThrowUtils.throwException(id <= 0, ErrorCode.PARAMS_ERROR, "图片ID有误");
+        // 查询数据库
+        Picture picture = pictureService.getById(id);
+        ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 获取图片VO
+        PictureVO pictureVO = pictureService.getPictureVO(picture, request);
+        return ResultUtils.success(pictureVO);
+    }
+
+    /**
+     * 分页获取图片列表
+     * @param pictureQueryRequest 图片查询请求
+     * @return 图片列表
+     */
+    @PostMapping("/list/page")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public Result<Page<Picture>> listPictureByPage(@RequestBody PictureQueryRequest pictureQueryRequest) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 查询数据库
+        Page<Picture> picturePage = pictureService.page(
+                new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest)
+        );
+        return ResultUtils.success(picturePage);
+    }
+    /**
+     * 分页获取图片封装类列表
+     * @param pictureQueryRequest 图片查询请求
+     * @return 图片封装类列表
+     */
+    @PostMapping("/list/page/vo")
+    public Result<Page<PictureVO>> listPictureVOByPage(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
+        // 查询数据库
+        Page<Picture> picturePage = pictureService.page(
+                new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest)
+        );
+        // 获取封装类
+        return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
+    }
+
+
 }

@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ylh.picturego.common.EncryptUtil;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
@@ -13,6 +14,7 @@ import com.ylh.picturego.model.dto.user.UserLoginRequest;
 import com.ylh.picturego.model.dto.user.UserQueryRequest;
 import com.ylh.picturego.model.dto.user.UserRegisterRequest;
 import com.ylh.picturego.model.entity.User;
+import com.ylh.picturego.model.enums.UserRoleEnum;
 import com.ylh.picturego.model.vo.LoginUserVO;
 import com.ylh.picturego.service.UserService;
 import com.ylh.picturego.mapper.UserMapper;
@@ -42,7 +44,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("userAccount", userRegisterRequest.getUserAccount());
         ThrowUtils.throwException(this.baseMapper.selectCount(queryWrapper) > 0, ErrorCode.PARAMS_ERROR, "用户账号已存在");
         // 密码加密
-        String encryptedPassword = this.getEncryptPassword(userRegisterRequest.getUserPassword());
+        String encryptedPassword = EncryptUtil.getEncryptPassword(userRegisterRequest.getUserPassword(), "PasswordSalt");
         // 保存用户
         User newUser = User.builder()
                 .userAccount(userRegisterRequest.getUserAccount())
@@ -88,12 +90,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public String getEncryptPassword(String password) {
-        // 密码加盐摘要
-        return DigestUtil.md5Hex(password + "PasswordSalt");
-    }
-
-    @Override
     public boolean userLogout(HttpServletRequest request) {
         // 判断是否登录
         Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
@@ -111,8 +107,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String userAccount = userQueryRequest.getUserAccount();
         String userProfile = userQueryRequest.getUserProfile();
         String userRole = userQueryRequest.getUserRole();
-        int current = userQueryRequest.getCurrent();
-        int pageSize = userQueryRequest.getPageSize();
         String sortField = userQueryRequest.getSortField();
         String sortOrder = userQueryRequest.getSortOrder();
 
@@ -124,6 +118,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq(StrUtil.isNotBlank(userRole), "userRole", userRole);
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("asc"), sortField);
         return queryWrapper;
+    }
+
+    @Override
+    public boolean isAdmin(User user) {
+        return user != null && user.getUserRole().equals(UserRoleEnum.ADMIN.getValue());
     }
 }
 

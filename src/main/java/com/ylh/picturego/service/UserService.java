@@ -41,24 +41,23 @@ public interface UserService extends IService<User> {
     User getLoginUser(HttpServletRequest request);
 
     /**
-     * 加密密码
-     * @param password
-     * @return 加密后的密码
-     */
-    String getEncryptPassword(String password);
-
-    /**
      * 用户注销
-     * @param request
+     * @param request 请求
      * @return 注销结果
      */
     boolean userLogout(HttpServletRequest request);
 
     /**
      * 获取查询条件
-     *
-     * @param userQueryRequest
+     * @param userQueryRequest 查询请求
      * @return 查询条件
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+
+    /**
+     * 是否是管理员
+     * @param user 用户
+     * @return 是否是管理员
+     */
+    boolean isAdmin(User user);
 }

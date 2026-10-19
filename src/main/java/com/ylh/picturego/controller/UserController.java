@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ylh.picturego.annotation.AuthCheck;
 import com.ylh.picturego.common.DeleteRequest;
+import com.ylh.picturego.common.EncryptUtil;
 import com.ylh.picturego.common.Result;
 import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
@@ -61,7 +62,6 @@ public class UserController {
 
     /**
      * 用户注销
-     *
      * @param request
      * @return 注销结果
      */
@@ -82,7 +82,7 @@ public class UserController {
         User user = new User();
         BeanUtil.copyProperties(userAddRequest, user);
         // 设置默认密码
-        String originPassword = userService.getEncryptPassword(UserConstant.DEFAULT_USER_PASSWORD);
+        String originPassword = EncryptUtil.getEncryptPassword(UserConstant.DEFAULT_USER_PASSWORD, "PasswordSalt");
         user.setUserPassword(originPassword);
         // 保存用户
         boolean result = userService.save(user);
@@ -98,7 +98,7 @@ public class UserController {
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public Result<User> getUserById(@RequestParam Long id) {
-        ThrowUtils.throwException(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "用户ID为空或小于等于0");
+        ThrowUtils.throwException(id == null || id <= 0, ErrorCode.PARAMS_ERROR, "用户ID有误");
         User user = userService.getById(id);
         ThrowUtils.throwException(user == null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
         return ResultUtils.success(user);
@@ -125,10 +125,10 @@ public class UserController {
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public Result<Boolean> deleteUser(@RequestParam DeleteRequest deleteRequest) {
-        ThrowUtils.throwException(deleteRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwException(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
         boolean result = userService.removeById(deleteRequest.getId());
         ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "用户删除失败");
-        return ResultUtils.success(result);
+        return ResultUtils.success(true);
     }
 
     /**
@@ -144,7 +144,7 @@ public class UserController {
         BeanUtil.copyProperties(userUpdateRequest, user);
         boolean result = userService.updateById(user);
         ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "用户编辑失败");
-        return ResultUtils.success(result);
+        return ResultUtils.success(true);
     }
 
     /**
