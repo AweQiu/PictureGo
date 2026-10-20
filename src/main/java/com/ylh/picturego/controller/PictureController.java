@@ -16,6 +16,7 @@ import com.ylh.picturego.model.dto.picture.PictureUpdateRequest;
 import com.ylh.picturego.model.dto.picture.PictureUploadRequest;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
+import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.service.PictureService;
 import com.ylh.picturego.service.UserService;
@@ -24,6 +25,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -211,5 +215,16 @@ public class PictureController {
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 
-
+    @GetMapping("/tag_category")
+    public Result<PictureTagCategory> listPictureTagCategory() {
+        PictureTagCategory pictureTagCategory = new PictureTagCategory();
+        // 静态标签列表
+        List<String> tagList = Arrays.asList("热门", "搞笑", "生活", "高清", "艺术", "动漫", "商务", "其他");
+        // 静态分类列表
+        List<String> categoryList = Arrays.asList("模板", "电商", "表情包", "素材", "海报", "二次元", "其他");
+        // 赋值
+        pictureTagCategory.setTags(tagList);
+        pictureTagCategory.setCategories(categoryList);
+        return ResultUtils.success(pictureTagCategory);
+    }
 }
