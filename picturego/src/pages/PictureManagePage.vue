@@ -368,8 +368,9 @@ async function handleDelete(record: Picture) {
             审核时间：{{ formatDateTime(record.reviewTime) }}
           </div>
           <div
-            v-if="record.reviewStatus === PIC_REVIEW_STATUS.REJECT && record.reviewMessage"
+            v-if="record.reviewMessage"
             class="review-message"
+            :class="{ 'is-reject': record.reviewStatus === PIC_REVIEW_STATUS.REJECT }"
             :title="record.reviewMessage"
           >
             {{ record.reviewMessage }}
@@ -545,9 +546,13 @@ async function handleDelete(record: Picture) {
 .review-message {
   margin-top: 4px;
   font-size: 12px;
-  color: #cf1322;
+  color: #8c8c8c;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.review-message.is-reject {
+  color: #cf1322;
 }
 </style>
