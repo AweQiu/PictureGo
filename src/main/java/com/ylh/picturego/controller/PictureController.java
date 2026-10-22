@@ -14,6 +14,7 @@ import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
+import com.ylh.picturego.model.enums.UserRoleEnum;
 import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.service.PictureService;
@@ -73,10 +74,10 @@ public class PictureController {
         Picture oldPicture = pictureService.getById(id);
         // 存在性校验
         ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-        // 权限校验，仅允许本人或管理员
+        // 权限校验，非本人则权限不得低于管理员
         ThrowUtils.throwException(
                 !oldPicture.getUserId().equals(loginUser.getId()) &&
-                !loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE),
+                UserRoleEnum.getEnumByValue(loginUser.getUserRole()).getLevel() < UserRoleEnum.ADMIN.getLevel(),
                 ErrorCode.OPERATION_ERROR, "无权限删除"
         );
         // 删除图片
@@ -137,10 +138,10 @@ public class PictureController {
         long id = pictureEditRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-        // 权限校验，仅允许本人或管理员
+        // 权限校验，非本人则权限不得低于管理员
         ThrowUtils.throwException(
                 !oldPicture.getUserId().equals(loginUser.getId()) &&
-                !loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE),
+                UserRoleEnum.getEnumByValue(loginUser.getUserRole()).getLevel() < UserRoleEnum.ADMIN.getLevel(),
                 ErrorCode.OPERATION_ERROR, "无权限编辑"
         );
         // 补充审核参数
@@ -240,6 +241,12 @@ public class PictureController {
         return ResultUtils.success(pictureTagCategory);
     }
 
+    /**
+     * 审核图片（管理员）
+     * @param pictureReviewRequest 图片审核请求
+     * @param request 请求
+     * @return 是否审核成功
+     */
     @PostMapping("/review")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public Result<Boolean> reviewPicture(@RequestBody PictureReviewRequest pictureReviewRequest, HttpServletRequest request) {

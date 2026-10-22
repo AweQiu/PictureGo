@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   AuditOutlined,
+  CloudUploadOutlined,
   DeleteOutlined,
   EditOutlined,
   FileSearchOutlined,
@@ -17,6 +18,7 @@ import {
   listPictureTagCategory,
   reviewPicture,
   updatePicture,
+  uploadPicture,
 } from '../api/picture'
 import { getUserVOById } from '../api/user'
 import {
@@ -158,7 +160,7 @@ const columns = [
   { title: '审核结果', key: 'review', width: 220 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170 },
   { title: '编辑时间', dataIndex: 'updateTime', key: 'updateTime', width: 170 },
-  { title: '操作', key: 'action', width: 250, fixed: 'right' as const },
+  { title: '操作', key: 'action', width: 340, fixed: 'right' as const },
 ]
 
 // ---------- 编辑 ----------
@@ -207,9 +209,46 @@ async function handleEditSubmit() {
   }
 }
 
+// ---------- 重新上传（替换图片文件） ----------
+const reuploadVisible = ref(false)
+const reuploading = ref(false)
+const reuploadTarget = ref<Picture | null>(null)
+
+function openReupload(record: Picture) {
+  reuploadTarget.value = record
+  reuploadVisible.value = true
+}
+
+async function handleReupload(file: File) {
+  const target = reuploadTarget.value
+  if (!target) return false
+  if (!file.type.startsWith('image/')) {
+    message.error('只能上传图片文件')
+    return false
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    message.error('图片大小不能超过 5MB')
+    return false
+  }
+  reuploading.value = true
+  try {
+    await uploadPicture(file, target.id)
+    message.success('图片已重新上传')
+    reuploadVisible.value = false
+    fetchData()
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '重新上传失败')
+  } finally {
+    reuploading.value = false
+  }
+  return false
+}
+
 // ---------- 审核 ----------
 const reviewVisible = ref(false)
 const reviewLoading = ref(false)
+/** 打开弹窗时的原始审核状态，用于判断是否真的修改了审核结果 */
+const reviewOriginStatus = ref<number>(PIC_REVIEW_STATUS.REVIEWING)
 const reviewForm = reactive({
   id: '' as string,
   name: '',
@@ -217,12 +256,25 @@ const reviewForm = reactive({
   reviewMessage: '',
 })
 
+const reviewTitle = computed(() =>
+  reviewOriginStatus.value === PIC_REVIEW_STATUS.REVIEWING
+    ? `审核图片「${reviewForm.name}」`
+    : `重新审核图片「${reviewForm.name}」`,
+)
+
 function openReview(record: Picture) {
+  reviewOriginStatus.value = record.reviewStatus
   Object.assign(reviewForm, {
     id: record.id,
     name: record.name,
-    reviewStatus: PIC_REVIEW_STATUS.PASS,
-    reviewMessage: '',
+    // 已审核的图片允许重新审核，表单回显当前审核结果
+    reviewStatus:
+      record.reviewStatus === PIC_REVIEW_STATUS.REVIEWING
+        ? PIC_REVIEW_STATUS.PASS
+        : record.reviewStatus,
+    // 只在拒绝时回显审核意见，避免把「自动过审」当成拒绝理由提交
+    reviewMessage:
+      record.reviewStatus === PIC_REVIEW_STATUS.REJECT ? record.reviewMessage ?? '' : '',
   })
   reviewVisible.value = true
 }
@@ -232,6 +284,13 @@ const reviewNeedMessage = computed(
 )
 
 async function handleReviewSubmit() {
+  if (
+    reviewOriginStatus.value !== PIC_REVIEW_STATUS.REVIEWING &&
+    reviewForm.reviewStatus === reviewOriginStatus.value
+  ) {
+    message.warning('审核状态未改变，请选择不同的审核结果')
+    return
+  }
   if (reviewNeedMessage.value && !reviewForm.reviewMessage.trim()) {
     message.warning('拒绝时请填写审核意见')
     return
@@ -241,7 +300,8 @@ async function handleReviewSubmit() {
     await reviewPicture({
       id: reviewForm.id,
       reviewStatus: reviewForm.reviewStatus,
-      reviewMessage: reviewForm.reviewMessage.trim() || undefined,
+      // 提交空字符串以清空上一次的审核意见，避免通过后仍显示旧的拒绝理由
+      reviewMessage: reviewForm.reviewMessage.trim(),
     })
     message.success('审核完成')
     reviewVisible.value = false
@@ -332,7 +392,7 @@ async function handleDelete(record: Picture) {
         pageSizeOptions: ['10', '20', '50'],
         showTotal: (count: number) => `共 ${count} 条`,
       }"
-      :scroll="{ x: 1810 }"
+      :scroll="{ x: 1900 }"
       row-key="id"
       @change="handleTableChange"
     >
@@ -392,14 +452,13 @@ async function handleDelete(record: Picture) {
               <template #icon><FileSearchOutlined /></template>
               详情
             </a-button>
-            <a-button
-              v-if="record.reviewStatus !== PIC_REVIEW_STATUS.PASS"
-              type="link"
-              size="small"
-              @click="openReview(record)"
-            >
+            <a-button type="link" size="small" @click="openReview(record)">
               <template #icon><AuditOutlined /></template>
               审核
+            </a-button>
+            <a-button type="link" size="small" @click="openReupload(record)">
+              <template #icon><CloudUploadOutlined /></template>
+              重新上传
             </a-button>
             <a-button type="link" size="small" @click="openEdit(record)">
               <template #icon><EditOutlined /></template>
@@ -467,7 +526,7 @@ async function handleDelete(record: Picture) {
 
   <a-modal
     v-model:open="reviewVisible"
-    :title="`审核图片「${reviewForm.name}」`"
+    :title="reviewTitle"
     ok-text="提交"
     cancel-text="取消"
     :confirm-loading="reviewLoading"
@@ -491,6 +550,26 @@ async function handleDelete(record: Picture) {
         />
       </a-form-item>
     </a-form>
+  </a-modal>
+
+  <a-modal
+    v-model:open="reuploadVisible"
+    :title="`重新上传「${reuploadTarget?.name ?? ''}」`"
+    :footer="null"
+    centered
+  >
+    <a-upload-dragger
+      accept="image/*"
+      :show-upload-list="false"
+      :before-upload="handleReupload"
+      :disabled="reuploading"
+    >
+      <a-spin :spinning="reuploading" tip="上传中...">
+        <p class="reupload-icon"><CloudUploadOutlined /></p>
+        <p class="reupload-text">点击或拖拽图片替换当前文件</p>
+        <p class="reupload-hint">支持 jpg / png / webp 等图片格式，大小不超过 5MB</p>
+      </a-spin>
+    </a-upload-dragger>
   </a-modal>
 </template>
 
@@ -554,5 +633,23 @@ async function handleDelete(record: Picture) {
 
 .review-message.is-reject {
   color: #cf1322;
+}
+
+.reupload-icon {
+  margin-bottom: 8px;
+  font-size: 38px;
+  color: #1677ff;
+}
+
+.reupload-text {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2d3d;
+}
+
+.reupload-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #8c8c8c;
 }
 </style>

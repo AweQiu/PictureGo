@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
+  CloudUploadOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
@@ -12,6 +13,7 @@ import {
   getPictureVOById,
   listPictureTagCategory,
   updatePicture,
+  uploadPicture,
 } from '../api/picture'
 import UserAvatar from '../components/UserAvatar.vue'
 import { useUserStore } from '../store/user'
@@ -28,6 +30,13 @@ const loadFailed = ref(false)
 
 /** 编辑 / 删除仅管理员可见 */
 const canManage = computed(() => userStore.isAdmin)
+
+/** 替换图片文件：管理员或图片作者本人可操作（与后端权限一致） */
+const canReupload = computed(
+  () =>
+    canManage.value ||
+    (!!picture.value && picture.value.userId === userStore.loginUser?.id),
+)
 
 async function fetchDetail() {
   loading.value = true
@@ -69,6 +78,35 @@ async function handleDownload() {
   } finally {
     downloading.value = false
   }
+}
+
+// ---------- 重新上传（替换图片文件） ----------
+const reuploadVisible = ref(false)
+const reuploading = ref(false)
+
+async function handleReupload(file: File) {
+  const target = picture.value
+  if (!target) return false
+  if (!file.type.startsWith('image/')) {
+    message.error('只能上传图片文件')
+    return false
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    message.error('图片大小不能超过 5MB')
+    return false
+  }
+  reuploading.value = true
+  try {
+    await uploadPicture(file, target.id)
+    message.success('图片已重新上传')
+    reuploadVisible.value = false
+    fetchDetail()
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '重新上传失败')
+  } finally {
+    reuploading.value = false
+  }
+  return false
 }
 
 // ---------- 编辑（管理员） ----------
@@ -249,6 +287,10 @@ onMounted(() => {
               </a-button>
             </a-popconfirm>
           </template>
+          <a-button v-if="canReupload" @click="reuploadVisible = true">
+            <template #icon><CloudUploadOutlined /></template>
+            重新上传
+          </a-button>
         </div>
       </section>
     </div>
@@ -262,6 +304,26 @@ onMounted(() => {
       </template>
     </a-result>
   </a-spin>
+
+  <a-modal
+    v-model:open="reuploadVisible"
+    title="重新上传"
+    :footer="null"
+    centered
+  >
+    <a-upload-dragger
+      accept="image/*"
+      :show-upload-list="false"
+      :before-upload="handleReupload"
+      :disabled="reuploading"
+    >
+      <a-spin :spinning="reuploading" tip="上传中...">
+        <p class="reupload-icon"><CloudUploadOutlined /></p>
+        <p class="reupload-text">点击或拖拽图片替换当前文件</p>
+        <p class="reupload-hint">支持 jpg / png / webp 等图片格式，大小不超过 5MB</p>
+      </a-spin>
+    </a-upload-dragger>
+  </a-modal>
 
   <a-modal
     v-model:open="editVisible"
@@ -323,13 +385,13 @@ onMounted(() => {
 }
 
 .preview-card {
-  flex: 1;
+  flex: 0 0 60%;
   min-width: 0;
 }
 
 .info-card {
-  flex-shrink: 0;
-  width: 420px;
+  flex: 1;
+  min-width: 360px;
 }
 
 .card-title {
@@ -342,13 +404,28 @@ onMounted(() => {
 .preview-body {
   display: flex;
   justify-content: center;
+  align-items: center;
+  min-height: 200px;
   background: #f7f8fa;
   border-radius: 8px;
+  overflow: hidden;
 }
 
-.preview-image :deep(img) {
+.preview-image {
+  display: block;
+}
+
+.preview-body :deep(.ant-image) {
+  display: block;
   max-width: 100%;
-  max-height: 70vh;
+}
+
+.preview-body :deep(img) {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 62vh;
   object-fit: contain;
 }
 
@@ -394,13 +471,37 @@ onMounted(() => {
 
 .action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
+}
+
+.reupload-icon {
+  margin-bottom: 8px;
+  font-size: 38px;
+  color: #1677ff;
+}
+
+.reupload-text {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2d3d;
+}
+
+.reupload-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
 @media (max-width: 900px) {
   .detail-page {
     flex-direction: column;
+  }
+
+  .preview-card {
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   .info-card {

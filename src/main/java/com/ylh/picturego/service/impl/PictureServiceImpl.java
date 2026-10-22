@@ -229,6 +229,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         ThrowUtils.throwException(
                 oldPicture.getReviewStatus().equals(reviewStatus.getCode()),
                 ErrorCode.PARAMS_ERROR, "审核状态未改变");
+        // 审核通过且未填写意见时，默认填充“审核通过”
+        if (reviewStatus == PictureReviewStatusEnum.PASS && StrUtil.isBlank(reviewMessage)) {
+            reviewMessage = "审核通过";
+        }
         // 数据库操作
         Picture newPicture = Picture.builder()
                 .id(id)

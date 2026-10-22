@@ -8,6 +8,7 @@ import lombok.Getter;
  */
 @Getter
 public enum UserRoleEnum {
+    SUPER_ADMIN("超管", "superadmin", 100),
     ADMIN("管理员", "admin", 10),
     USER("普通用户", "user", 1);
     private final String text;
