@@ -95,7 +95,7 @@ public class FileManager {
         ThrowUtils.throwException(fileSize > 5 * ONE_M, ErrorCode.PARAMS_ERROR, "文件大小不能超过 5M");
         // 校验文件后缀
         String fileSuffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
-        final List<String> ALLOWED_FORMATS = Arrays.asList("png", "jpg", "jpeg", "gif");
+        final List<String> ALLOWED_FORMATS = Arrays.asList("png", "jpg", "jpeg", "gif", "webp");
         ThrowUtils.throwException(!ALLOWED_FORMATS.contains(fileSuffix), ErrorCode.PARAMS_ERROR, "文件后缀只能是 png, jpg, jpeg, gif");
     }
 

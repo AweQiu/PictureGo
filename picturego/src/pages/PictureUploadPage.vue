@@ -116,7 +116,7 @@ onMounted(fetchTagCategory)
         <template v-else>
           <p class="dragger-icon"><InboxOutlined /></p>
           <p class="dragger-text">点击或拖拽图片到此处上传</p>
-          <p class="dragger-hint">支持 jpg / png / webp 等图片格式，大小不超过 5MB</p>
+          <p class="dragger-hint">支持 jpg / jpeg / gif / png / webp 等图片格式，大小不超过 5MB</p>
         </template>
       </a-spin>
     </a-upload-dragger>
