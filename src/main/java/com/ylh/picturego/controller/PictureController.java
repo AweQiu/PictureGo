@@ -10,12 +10,10 @@ import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
-import com.ylh.picturego.model.dto.picture.PictureEditRequest;
-import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
-import com.ylh.picturego.model.dto.picture.PictureUpdateRequest;
-import com.ylh.picturego.model.dto.picture.PictureUploadRequest;
+import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
+import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
 import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.service.PictureService;
@@ -48,7 +46,6 @@ public class PictureController {
      * @return 图片信息
      */
     @PostMapping("/upload")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public Result<PictureVO> uploadPicture(
             @RequestPart MultipartFile file,
             PictureUploadRequest pictureUploadRequest,
@@ -95,7 +92,10 @@ public class PictureController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public Result<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public Result<Boolean> updatePicture(
+            @RequestBody PictureUpdateRequest pictureUpdateRequest,
+            HttpServletRequest request
+    ) {
         ThrowUtils.throwException(pictureUpdateRequest == null, ErrorCode.PARAMS_ERROR);
         // DTO类转实体类
         Picture picture = new Picture();
@@ -108,6 +108,8 @@ public class PictureController {
         long id = pictureUpdateRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 补充审核参数
+        pictureService.fillReviewParams(picture, userService.getLoginUser(request));
         // 操作数据库
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片更新失败");
@@ -141,6 +143,8 @@ public class PictureController {
                 !loginUser.getUserRole().equals(UserConstant.ADMIN_ROLE),
                 ErrorCode.OPERATION_ERROR, "无权限编辑"
         );
+        // 补充审核参数
+        pictureService.fillReviewParams(picture, loginUser);
         // 操作数据库
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片编辑失败");
@@ -173,6 +177,8 @@ public class PictureController {
         // 查询数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 只返回审核通过的图片
+        ThrowUtils.throwException(picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getCode(), ErrorCode.OPERATION_ERROR, "图片审核未通过");
         // 获取图片VO
         PictureVO pictureVO = pictureService.getPictureVO(picture, request);
         return ResultUtils.success(pictureVO);
@@ -206,6 +212,8 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
+        // 只允许查询通过审核的图片
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getCode());
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(
                 new Page<>(current, size),
@@ -215,6 +223,10 @@ public class PictureController {
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 
+    /**
+     * 获取图片标签和分类（静态）
+     * @return 图片标签和分类
+     */
     @GetMapping("/tag_category")
     public Result<PictureTagCategory> listPictureTagCategory() {
         PictureTagCategory pictureTagCategory = new PictureTagCategory();
@@ -226,5 +238,16 @@ public class PictureController {
         pictureTagCategory.setTags(tagList);
         pictureTagCategory.setCategories(categoryList);
         return ResultUtils.success(pictureTagCategory);
+    }
+
+    @PostMapping("/review")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public Result<Boolean> reviewPicture(@RequestBody PictureReviewRequest pictureReviewRequest, HttpServletRequest request) {
+        ThrowUtils.throwException(pictureReviewRequest == null || pictureReviewRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
+        // 获取登录用户
+        User loginUser = userService.getLoginUser(request);
+
+        pictureService.reviewPicture(pictureReviewRequest, loginUser);
+        return ResultUtils.success(true);
     }
 }

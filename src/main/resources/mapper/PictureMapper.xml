@@ -11,6 +11,10 @@
             <result property="introduction" column="introduction" />
             <result property="category" column="category" />
             <result property="tags" column="tags" />
+            <result property="reviewStatus" column="reviewStatus" />
+            <result property="reviewMessage" column="reviewMessage" />
+            <result property="reviewerId" column="reviewerId" />
+            <result property="reviewTime" column="reviewTime" />
             <result property="picSize" column="picSize" />
             <result property="picWidth" column="picWidth" />
             <result property="picHeight" column="picHeight" />
@@ -25,6 +29,7 @@
 
     <sql id="Base_Column_List">
         id,url,name,introduction,category,tags,
+        reviewStatus,reviewMessage,reviewerId,reviewTime,
         picSize,picWidth,picHeight,picScale,picFormat,
         userId,createTime,editTime,updateTime,isDelete
     </sql>
