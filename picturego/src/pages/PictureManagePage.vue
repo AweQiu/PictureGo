@@ -17,6 +17,7 @@ import {
   reviewPicture,
   updatePicture,
 } from '../api/picture'
+import { getUserVOById } from '../api/user'
 import {
   PIC_REVIEW_STATUS,
   PIC_REVIEW_STATUS_COLOR,
@@ -56,6 +57,26 @@ async function fetchTagCategory() {
   }
 }
 
+/** 审核人 ID -> 展示名（后端 Picture 只返回 reviewerId，这里按需查出用户名） */
+const reviewerNames = reactive<Record<string, string>>({})
+
+async function resolveReviewerNames(records: Picture[]) {
+  const ids = Array.from(
+    new Set(records.map((record) => record.reviewerId).filter(Boolean)),
+  )
+  await Promise.all(
+    ids.map(async (id) => {
+      if (id in reviewerNames) return
+      try {
+        const user = await getUserVOById(id)
+        reviewerNames[id] = user.userName || user.userAccount || id
+      } catch {
+        reviewerNames[id] = ''
+      }
+    }),
+  )
+}
+
 async function fetchData() {
   loading.value = true
   try {
@@ -68,8 +89,10 @@ async function fetchData() {
       reviewStatus: queryForm.reviewStatus,
       userId: queryForm.userId,
     })
-    pictureList.value = page.records ?? []
+    const records = page.records ?? []
+    pictureList.value = records
     total.value = Number(page.total ?? 0)
+    await resolveReviewerNames(records)
   } catch (error) {
     message.error(error instanceof Error ? error.message : '查询图片失败')
   } finally {
@@ -137,8 +160,9 @@ const columns = [
   { title: '标签', dataIndex: 'tags', key: 'tags', width: 130 },
   { title: '图片信息', key: 'picInfo', width: 120 },
   { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 120, ellipsis: true },
-  { title: '审核结果', key: 'review', width: 150 },
+  { title: '审核结果', key: 'review', width: 220 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170 },
+  { title: '编辑时间', dataIndex: 'updateTime', key: 'updateTime', width: 170 },
   { title: '操作', key: 'action', width: 250, fixed: 'right' as const },
 ]
 
@@ -313,7 +337,7 @@ async function handleDelete(record: Picture) {
         pageSizeOptions: ['10', '20', '50'],
         showTotal: (count: number) => `共 ${count} 条`,
       }"
-      :scroll="{ x: 1420 }"
+      :scroll="{ x: 1810 }"
       row-key="id"
       @change="handleTableChange"
     >
@@ -342,6 +366,12 @@ async function handleDelete(record: Picture) {
           <a-tag :color="PIC_REVIEW_STATUS_COLOR[record.reviewStatus] ?? 'default'">
             {{ PIC_REVIEW_STATUS_TEXT[record.reviewStatus] ?? record.reviewStatus }}
           </a-tag>
+          <div v-if="record.reviewerId" class="review-meta">
+            审核人：{{ reviewerNames[record.reviewerId] || record.reviewerId }}
+          </div>
+          <div v-if="record.reviewTime" class="review-meta">
+            审核时间：{{ formatDateTime(record.reviewTime) }}
+          </div>
           <div
             v-if="record.reviewStatus === PIC_REVIEW_STATUS.REJECT && record.reviewMessage"
             class="review-message"
@@ -352,6 +382,9 @@ async function handleDelete(record: Picture) {
         </template>
         <template v-else-if="column.key === 'createTime'">
           <span>{{ formatDateTime(record.createTime) }}</span>
+        </template>
+        <template v-else-if="column.key === 'updateTime'">
+          <span>{{ formatDateTime(record.updateTime) }}</span>
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="0">
@@ -500,6 +533,14 @@ async function handleDelete(record: Picture) {
 
 .pic-info-sub {
   color: #8c8c8c;
+}
+
+.review-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  color: #8c8c8c;
+  white-space: nowrap;
 }
 
 .review-message {

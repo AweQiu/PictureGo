@@ -31,3 +31,7 @@ export function deleteUser(data: DeleteRequest) {
 export function listUserVOByPage(data: UserQueryRequest) {
   return request.post<unknown, Page<UserVO>>('/user/list/page/vo', data)
 }
+
+export function getUserVOById(id: number | string) {
+  return request.get<unknown, UserVO>('/user/get/vo', { params: { id } })
+}

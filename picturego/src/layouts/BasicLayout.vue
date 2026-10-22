@@ -7,6 +7,7 @@ import {
   HomeOutlined,
   LogoutOutlined,
   PictureOutlined,
+  PlusOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue'
@@ -99,6 +100,12 @@ function handleUserMenuClick({ key }: { key: string }) {
     })
   }
 }
+
+// ---------- 创建图片 ----------
+function handleCreatePicture() {
+  // 上传页尚未开发，保留入口占位；开发后改为 router.push({ name: 'pictureUpload' })
+  message.info('创建图片页面开发中')
+}
 </script>
 
 <template>
@@ -115,28 +122,34 @@ function handleUserMenuClick({ key }: { key: string }) {
         :items="menuItems"
         @click="handleMenuClick"
       />
-      <a-dropdown placement="bottomRight" :trigger="['click']">
-        <div class="user-info">
-          <UserAvatar :src="userStore.loginUser?.userAvatar" :size="36" />
-          <span class="nickname">{{ userStore.displayName }}</span>
-          <DownOutlined class="down-icon" />
-        </div>
-        <template #overlay>
-          <a-menu @click="handleUserMenuClick">
-            <a-menu-item key="profile">
-              <UserOutlined />
-              个人信息
-            </a-menu-item>
-            <a-menu-divider />
-            <a-menu-item key="logout">
-              <LogoutOutlined />
-              退出登录
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
+      <div class="header-right">
+        <a-button type="primary" class="create-btn" @click="handleCreatePicture">
+          <template #icon><PlusOutlined /></template>
+          创建图片
+        </a-button>
+        <a-dropdown placement="bottomRight" :trigger="['click']">
+          <div class="user-info">
+            <UserAvatar :src="userStore.loginUser?.userAvatar" :size="36" />
+            <span class="nickname">{{ userStore.displayName }}</span>
+            <DownOutlined class="down-icon" />
+          </div>
+          <template #overlay>
+            <a-menu @click="handleUserMenuClick">
+              <a-menu-item key="profile">
+                <UserOutlined />
+                个人信息
+              </a-menu-item>
+              <a-menu-divider />
+              <a-menu-item key="logout">
+                <LogoutOutlined />
+                退出登录
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </div>
     </a-layout-header>
-    <a-layout-content class="content">
+    <a-layout-content :class="['content', { 'content-full': route.name === 'home' }]">
       <router-view />
     </a-layout-content>
   </a-layout>
@@ -220,6 +233,17 @@ function handleUserMenuClick({ key }: { key: string }) {
   line-height: 62px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.create-btn {
+  flex-shrink: 0;
+}
+
 .user-info {
   display: flex;
   align-items: center;
@@ -245,5 +269,10 @@ function handleUserMenuClick({ key }: { key: string }) {
 .content {
   padding: 24px;
   background: #f5f7fa;
+}
+
+/* 图片广场等需要横向铺满的页面，仅保留 10px 边距 */
+.content-full {
+  padding: 24px 10px;
 }
 </style>
