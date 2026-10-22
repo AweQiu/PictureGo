@@ -10,7 +10,7 @@ const userStore = useUserStore()
       <img src="/picgo.png" alt="PicGo云图库" class="welcome-logo" />
       <h1 class="welcome-title">PicGo云图库</h1>
       <p class="welcome-desc">
-        你好，{{ userStore.currentUser?.username }}！欢迎使用 PicGo云图库，在这里管理你的图片。
+        你好，{{ userStore.displayName }}！欢迎使用 PicGo云图库，在这里管理你的图片。
       </p>
     </a-card>
   </div>

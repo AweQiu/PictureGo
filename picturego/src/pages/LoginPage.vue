@@ -11,57 +11,66 @@ const userStore = useUserStore()
 const activeTab = ref<'login' | 'register'>('login')
 
 const loginForm = reactive({
-  account: '',
-  password: '',
+  userAccount: '',
+  userPassword: '',
 })
 
 const registerForm = reactive({
-  account: '',
-  password: '',
-  confirmPassword: '',
+  userAccount: '',
+  userPassword: '',
+  checkPassword: '',
 })
 
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
 async function handleLogin() {
-  if (!loginForm.account || !loginForm.password) {
+  if (!loginForm.userAccount || !loginForm.userPassword) {
     message.warning('请输入账号和密码')
     return
   }
   loginLoading.value = true
-  const error = userStore.login(loginForm.account, loginForm.password)
-  loginLoading.value = false
-  if (error) {
-    message.error(error)
-    return
+  try {
+    await userStore.login({
+      userAccount: loginForm.userAccount.trim(),
+      userPassword: loginForm.userPassword,
+    })
+    message.success('登录成功')
+    router.replace({ name: 'home' })
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '登录失败')
+  } finally {
+    loginLoading.value = false
   }
-  message.success('登录成功')
-  router.replace({ name: 'home' })
 }
 
 async function handleRegister() {
-  if (!registerForm.account || !registerForm.password) {
+  if (!registerForm.userAccount || !registerForm.userPassword) {
     message.warning('请输入账号和密码')
     return
   }
-  if (registerForm.password !== registerForm.confirmPassword) {
+  if (registerForm.userPassword !== registerForm.checkPassword) {
     message.warning('两次输入的密码不一致')
     return
   }
   registerLoading.value = true
-  const error = userStore.register(registerForm.account, registerForm.password)
-  registerLoading.value = false
-  if (error) {
-    message.error(error)
-    return
+  try {
+    await userStore.register({
+      userAccount: registerForm.userAccount.trim(),
+      userPassword: registerForm.userPassword,
+      checkPassword: registerForm.checkPassword,
+    })
+    message.success('注册成功，请登录')
+    activeTab.value = 'login'
+    loginForm.userAccount = registerForm.userAccount
+    registerForm.userAccount = ''
+    registerForm.userPassword = ''
+    registerForm.checkPassword = ''
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '注册失败')
+  } finally {
+    registerLoading.value = false
   }
-  message.success('注册成功，请登录')
-  activeTab.value = 'login'
-  loginForm.account = registerForm.account
-  registerForm.account = ''
-  registerForm.password = ''
-  registerForm.confirmPassword = ''
 }
 </script>
 
@@ -77,7 +86,7 @@ async function handleRegister() {
           <a-form layout="vertical" @submit.prevent="handleLogin">
             <a-form-item label="账号">
               <a-input
-                v-model:value="loginForm.account"
+                v-model:value="loginForm.userAccount"
                 size="large"
                 placeholder="请输入账号"
               >
@@ -88,7 +97,7 @@ async function handleRegister() {
             </a-form-item>
             <a-form-item label="密码">
               <a-input-password
-                v-model:value="loginForm.password"
+                v-model:value="loginForm.userPassword"
                 size="large"
                 placeholder="请输入密码"
                 @press-enter="handleLogin"
@@ -113,7 +122,7 @@ async function handleRegister() {
           <a-form layout="vertical" @submit.prevent="handleRegister">
             <a-form-item label="账号">
               <a-input
-                v-model:value="registerForm.account"
+                v-model:value="registerForm.userAccount"
                 size="large"
                 placeholder="请输入账号"
               >
@@ -124,7 +133,7 @@ async function handleRegister() {
             </a-form-item>
             <a-form-item label="密码">
               <a-input-password
-                v-model:value="registerForm.password"
+                v-model:value="registerForm.userPassword"
                 size="large"
                 placeholder="请输入密码"
               >
@@ -135,7 +144,7 @@ async function handleRegister() {
             </a-form-item>
             <a-form-item label="确认密码">
               <a-input-password
-                v-model:value="registerForm.confirmPassword"
+                v-model:value="registerForm.checkPassword"
                 size="large"
                 placeholder="请再次输入密码"
                 @press-enter="handleRegister"

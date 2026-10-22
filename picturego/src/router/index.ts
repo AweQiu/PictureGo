@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { useUserStore } from '../store/user'
 
 const router = createRouter({
@@ -24,7 +25,13 @@ const router = createRouter({
           path: 'user-manage',
           name: 'userManage',
           component: () => import('../pages/UserManagePage.vue'),
-          meta: { title: '用户管理' },
+          meta: { title: '用户管理', requiresAdmin: true },
+        },
+        {
+          path: 'picture-manage',
+          name: 'pictureManage',
+          component: () => import('../pages/PictureManagePage.vue'),
+          meta: { title: '图片管理', requiresAdmin: true },
         },
       ],
     },
@@ -35,12 +42,19 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
+  if (!userStore.hasFetched) {
+    await userStore.fetchLoginUser()
+  }
   if (!userStore.isLogin && to.name !== 'login') {
     return { name: 'login' }
   }
   if (userStore.isLogin && to.name === 'login') {
+    return { name: 'home' }
+  }
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    message.warning('没有权限访问该页面')
     return { name: 'home' }
   }
   document.title = to.meta.title
