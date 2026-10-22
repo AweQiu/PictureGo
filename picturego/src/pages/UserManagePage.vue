@@ -9,7 +9,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
-import { addUser, deleteUser, listUserVOByPage, updateUser } from '../api/user'
+import { addUser, deleteUser, getUserById, listUserVOByPage, updateUser } from '../api/user'
 import { USER_ROLE, USER_ROLE_OPTIONS, USER_ROLE_TEXT } from '../constants/enums'
 import { useUserStore } from '../store/user'
 import { formatDateTime } from '../utils/format'
@@ -33,6 +33,23 @@ const pagination = reactive({
   pageSize: 10,
 })
 
+/** 用户 ID -> 编辑时间（UserVO 不含 updateTime，按需从 /user/get 取） */
+const updateTimeMap = reactive<Record<string, string>>({})
+
+async function resolveUpdateTimes(records: UserVO[]) {
+  await Promise.all(
+    records.map(async (record) => {
+      if (record.id in updateTimeMap) return
+      try {
+        const user = await getUserById(record.id)
+        updateTimeMap[record.id] = user.updateTime
+      } catch {
+        updateTimeMap[record.id] = ''
+      }
+    }),
+  )
+}
+
 async function fetchData() {
   loading.value = true
   try {
@@ -43,8 +60,10 @@ async function fetchData() {
       userName: queryForm.userName || undefined,
       userRole: queryForm.userRole || undefined,
     })
-    userList.value = page.records ?? []
+    const records = page.records ?? []
+    userList.value = records
     total.value = Number(page.total ?? 0)
+    await resolveUpdateTimes(records)
   } catch (error) {
     message.error(error instanceof Error ? error.message : '查询用户失败')
   } finally {
@@ -87,6 +106,7 @@ const columns = [
   },
   { title: '角色', dataIndex: 'userRole', key: 'userRole', width: 100 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170 },
+  { title: '编辑时间', key: 'updateTime', width: 170 },
   { title: '操作', key: 'action', width: 210, fixed: 'right' as const },
 ]
 
@@ -137,18 +157,25 @@ function openAdd() {
 function openEdit(record: UserVO) {
   dialogMode.value = 'edit'
   editingId.value = record.id
+  // 后端可能返回 null，统一归一化为字符串，避免提交时对 null 调用 trim
   Object.assign(editForm, {
-    userAccount: record.userAccount,
-    userName: record.userName,
-    userAvatar: record.userAvatar,
-    userProfile: record.userProfile,
+    userAccount: record.userAccount ?? '',
+    userName: record.userName ?? '',
+    userAvatar: record.userAvatar ?? '',
+    userProfile: record.userProfile ?? '',
     userRole: record.userRole,
   })
   editVisible.value = true
 }
 
+/** 归一化输入：null/undefined 视为空字符串 */
+function toText(value: string | null | undefined): string {
+  return (value ?? '').trim()
+}
+
 async function handleDialogSubmit() {
-  if (!editForm.userAccount.trim()) {
+  const userAccount = toText(editForm.userAccount)
+  if (!userAccount) {
     message.warning('账号不能为空')
     return
   }
@@ -156,29 +183,26 @@ async function handleDialogSubmit() {
     message.warning('请选择角色')
     return
   }
+  // 用户名、简介选填；留空即清空原内容（后端接受空字符串）
+  const payload = {
+    userAccount,
+    userName: toText(editForm.userName),
+    userAvatar: editForm.userAvatar ?? '',
+    userProfile: toText(editForm.userProfile),
+    userRole: editForm.userRole,
+  }
   editLoading.value = true
   try {
     if (dialogMode.value === 'add') {
-      await addUser({
-        userAccount: editForm.userAccount.trim(),
-        userName: editForm.userName.trim() || undefined,
-        userAvatar: editForm.userAvatar || undefined,
-        userProfile: editForm.userProfile.trim() || undefined,
-        userRole: editForm.userRole,
-      })
+      await addUser(payload)
       message.success('新增用户成功')
     } else {
-      await updateUser({
-        id: editingId.value!,
-        userAccount: editForm.userAccount.trim(),
-        userName: editForm.userName.trim() || undefined,
-        userAvatar: editForm.userAvatar || undefined,
-        userProfile: editForm.userProfile.trim() || undefined,
-        userRole: editForm.userRole,
-      })
+      await updateUser({ id: editingId.value!, ...payload })
       message.success('用户信息已更新')
     }
     editVisible.value = false
+    // 编辑会刷新 updateTime，清掉缓存以便重新拉取
+    if (editingId.value) delete updateTimeMap[editingId.value]
     fetchData()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败')
@@ -192,6 +216,7 @@ async function handleDelete(record: UserVO) {
   try {
     await deleteUser({ id: record.id })
     message.success(`已删除用户「${record.userName}」`)
+    delete updateTimeMap[record.id]
     if (userList.value.length === 1 && pagination.current > 1) {
       pagination.current -= 1
     }
@@ -254,7 +279,7 @@ async function handleDelete(record: UserVO) {
         pageSizeOptions: ['10', '20', '50'],
         showTotal: (count: number) => `共 ${count} 条`,
       }"
-      :scroll="{ x: 1180 }"
+      :scroll="{ x: 1350 }"
       row-key="id"
       @change="handleTableChange"
     >
@@ -272,6 +297,9 @@ async function handleDelete(record: UserVO) {
         </template>
         <template v-else-if="column.key === 'createTime'">
           <span>{{ formatDateTime(record.createTime) }}</span>
+        </template>
+        <template v-else-if="column.key === 'updateTime'">
+          <span>{{ formatDateTime(updateTimeMap[record.id]) }}</span>
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="0">
@@ -333,6 +361,9 @@ async function handleDelete(record: UserVO) {
         <a-descriptions-item label="创建时间">
           {{ formatDateTime(detailUser.createTime) }}
         </a-descriptions-item>
+        <a-descriptions-item label="编辑时间">
+          {{ formatDateTime(updateTimeMap[detailUser.id]) }}
+        </a-descriptions-item>
       </a-descriptions>
     </div>
   </a-modal>
@@ -353,16 +384,16 @@ async function handleDelete(record: UserVO) {
       <a-form-item label="账号" required>
         <a-input v-model:value="editForm.userAccount" placeholder="请输入账号" />
       </a-form-item>
-      <a-form-item label="用户名" :required="dialogMode === 'edit'">
+      <a-form-item label="用户名">
         <a-input
           v-model:value="editForm.userName"
-          :placeholder="dialogMode === 'add' ? '选填，默认为账号' : '请输入用户名'"
+          :placeholder="dialogMode === 'add' ? '选填，默认为账号' : '选填，留空则清空用户名'"
         />
       </a-form-item>
       <a-form-item label="简介">
         <a-textarea
           v-model:value="editForm.userProfile"
-          placeholder="请输入简介"
+          placeholder="选填，留空即清空简介"
           :rows="3"
           :maxlength="100"
           show-count

@@ -33,6 +33,12 @@ const router = createRouter({
           component: () => import('../pages/PictureManagePage.vue'),
           meta: { title: '图片管理', requiresAdmin: true },
         },
+        {
+          path: 'picture/:id',
+          name: 'pictureDetail',
+          component: () => import('../pages/PictureDetailPage.vue'),
+          meta: { title: '图片详情' },
+        },
       ],
     },
     {

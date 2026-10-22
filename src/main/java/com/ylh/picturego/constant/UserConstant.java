@@ -28,5 +28,5 @@ public interface UserConstant {
     /**
      * 默认用户密码
      */
-    String DEFAULT_USER_PASSWORD = "123456";
+    String DEFAULT_USER_PASSWORD = "12345678";
 }

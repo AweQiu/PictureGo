@@ -17,6 +17,15 @@ function pad(value: number): string {
   return String(value).padStart(2, '0')
 }
 
+/** 文件大小展示：1024 以下 B，1MB 以下 KB，其余 MB */
+export function formatFileSize(size?: number | string | null): string {
+  const bytes = Number(size)
+  if (!bytes) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
+
 /**
  * 统一时间展示为 yyyy-MM-dd HH:mm:ss。
  * 兼容后端两种返回格式：

@@ -35,3 +35,7 @@ export function listUserVOByPage(data: UserQueryRequest) {
 export function getUserVOById(id: number | string) {
   return request.get<unknown, UserVO>('/user/get/vo', { params: { id } })
 }
+
+export function getUserById(id: number | string) {
+  return request.get<unknown, User>('/user/get', { params: { id } })
+}

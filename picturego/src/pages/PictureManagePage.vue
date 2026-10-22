@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   AuditOutlined,
@@ -24,7 +25,9 @@ import {
   PIC_REVIEW_STATUS_OPTIONS,
   PIC_REVIEW_STATUS_TEXT,
 } from '../constants/enums'
-import { formatDateTime } from '../utils/format'
+import { formatDateTime, formatFileSize } from '../utils/format'
+
+const router = useRouter()
 
 // ---------- 查询与分页 ----------
 const queryForm = reactive({
@@ -134,14 +137,6 @@ function parseTags(tags: string | string[]): string[] {
   } catch {
     return []
   }
-}
-
-function formatSize(size: number | string): string {
-  const bytes = Number(size)
-  if (!bytes) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
 
 // ---------- 表格 ----------
@@ -358,7 +353,7 @@ async function handleDelete(record: Picture) {
           <div class="pic-info">
             <div>{{ record.picWidth }} × {{ record.picHeight }}</div>
             <div class="pic-info-sub">
-              {{ formatSize(record.picSize) }} / {{ record.picFormat || '—' }}
+              {{ formatFileSize(record.picSize) }} / {{ record.picFormat || '—' }}
             </div>
           </div>
         </template>
@@ -388,7 +383,11 @@ async function handleDelete(record: Picture) {
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="0">
-            <a-button type="link" size="small" disabled>
+            <a-button
+              type="link"
+              size="small"
+              @click="router.push({ name: 'pictureDetail', params: { id: record.id } })"
+            >
               <template #icon><FileSearchOutlined /></template>
               详情
             </a-button>

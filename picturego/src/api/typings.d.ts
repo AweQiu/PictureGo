@@ -27,6 +27,20 @@ interface LoginUserVO {
   updateTime: string
 }
 
+/** 用户实体（管理端 getUserById 返回，含编辑时间） */
+interface User {
+  id: string
+  userAccount: string
+  userName: string
+  userAvatar: string
+  userProfile: string
+  userRole: string
+  editTime: string
+  createTime: string
+  updateTime: string
+  isDelete: number
+}
+
 /** 用户视图（脱敏） */
 interface UserVO {
   id: string

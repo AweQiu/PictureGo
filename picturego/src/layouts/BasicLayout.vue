@@ -51,27 +51,30 @@ const profileForm = reactive({
 function openProfile() {
   const user = userStore.loginUser
   if (!user) return
+  // 后端可能返回 null，统一归一化为字符串
   Object.assign(profileForm, {
-    userAccount: user.userAccount,
-    userName: user.userName,
-    userAvatar: user.userAvatar,
-    userProfile: user.userProfile,
+    userAccount: user.userAccount ?? '',
+    userName: user.userName ?? '',
+    userAvatar: user.userAvatar ?? '',
+    userProfile: user.userProfile ?? '',
   })
   profileVisible.value = true
 }
 
 async function handleProfileSubmit() {
-  if (!profileForm.userAccount.trim() || !profileForm.userName.trim()) {
-    message.warning('账号和用户名不能为空')
+  const userAccount = (profileForm.userAccount ?? '').trim()
+  if (!userAccount) {
+    message.warning('账号不能为空')
     return
   }
   profileLoading.value = true
   try {
     await userStore.updateProfile({
-      userAccount: profileForm.userAccount.trim(),
-      userName: profileForm.userName.trim(),
-      userAvatar: profileForm.userAvatar || undefined,
-      userProfile: profileForm.userProfile.trim() || undefined,
+      userAccount,
+      // 用户名、简介选填；留空即清空原内容
+      userName: (profileForm.userName ?? '').trim(),
+      userAvatar: profileForm.userAvatar ?? '',
+      userProfile: (profileForm.userProfile ?? '').trim(),
     })
     message.success('个人信息已更新')
     profileVisible.value = false
@@ -170,13 +173,16 @@ function handleCreatePicture() {
       <a-form-item label="账号" required>
         <a-input v-model:value="profileForm.userAccount" placeholder="请输入账号" />
       </a-form-item>
-      <a-form-item label="用户名" required>
-        <a-input v-model:value="profileForm.userName" placeholder="请输入用户名" />
+      <a-form-item label="用户名">
+        <a-input
+          v-model:value="profileForm.userName"
+          placeholder="选填，留空则清空用户名"
+        />
       </a-form-item>
       <a-form-item label="简介">
         <a-textarea
           v-model:value="profileForm.userProfile"
-          placeholder="介绍一下自己吧"
+          placeholder="选填，留空即清空简介"
           :rows="3"
           :maxlength="100"
           show-count

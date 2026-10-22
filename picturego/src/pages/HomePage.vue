@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { listPictureTagCategory, listPictureVOByPage } from '../api/picture'
+
+const router = useRouter()
 
 const pictureList = ref<PictureVO[]>([])
 const loading = ref(false)
@@ -92,8 +95,7 @@ function handlePageChange(page: number, pageSize: number) {
 }
 
 function openDetail(picture: PictureVO) {
-  // 图片详情页尚未开发，保留入口占位；开发后改为 router.push(`/picture/${picture.id}`)
-  message.info(`图片「${picture.name}」详情页开发中`)
+  router.push({ name: 'pictureDetail', params: { id: picture.id } })
 }
 
 onMounted(() => {
