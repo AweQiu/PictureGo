@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
+  AuditOutlined,
   CloudUploadOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -10,12 +11,15 @@ import {
 } from '@ant-design/icons-vue'
 import {
   deletePicture,
+  getPictureById,
   getPictureVOById,
   listPictureTagCategory,
+  reviewPicture,
   updatePicture,
   uploadPicture,
 } from '../api/picture'
 import UserAvatar from '../components/UserAvatar.vue'
+import { PIC_REVIEW_STATUS } from '../constants/enums'
 import { useUserStore } from '../store/user'
 import { formatDateTime, formatFileSize } from '../utils/format'
 
@@ -188,6 +192,76 @@ async function handleDelete() {
   }
 }
 
+// ---------- 审核（管理员） ----------
+const reviewVisible = ref(false)
+const reviewLoading = ref(false)
+/** 打开弹窗时的原始审核状态，用于判断是否真的修改了审核结果 */
+const reviewOriginStatus = ref<number>(PIC_REVIEW_STATUS.REVIEWING)
+const reviewForm = reactive({
+  reviewStatus: PIC_REVIEW_STATUS.PASS as number,
+  reviewMessage: '',
+})
+
+const reviewNeedMessage = computed(
+  () => reviewForm.reviewStatus === PIC_REVIEW_STATUS.REJECT,
+)
+
+const reviewTitle = computed(() =>
+  reviewOriginStatus.value === PIC_REVIEW_STATUS.REVIEWING
+    ? `审核图片「${picture.value?.name ?? ''}」`
+    : `重新审核图片「${picture.value?.name ?? ''}」`,
+)
+
+/** 详情页用的是 PictureVO，不含审核字段，打开弹窗时从管理员接口取当前审核状态 */
+async function openReview() {
+  const target = picture.value
+  if (!target) return
+  try {
+    const detail = await getPictureById(target.id)
+    reviewOriginStatus.value = detail.reviewStatus
+    reviewForm.reviewStatus =
+      detail.reviewStatus === PIC_REVIEW_STATUS.REVIEWING
+        ? PIC_REVIEW_STATUS.PASS
+        : detail.reviewStatus
+    // 只在拒绝时回显审核意见，避免把「自动过审」当成拒绝理由提交
+    reviewForm.reviewMessage =
+      detail.reviewStatus === PIC_REVIEW_STATUS.REJECT ? detail.reviewMessage ?? '' : ''
+    reviewVisible.value = true
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '获取审核状态失败')
+  }
+}
+
+async function handleReviewSubmit() {
+  const target = picture.value
+  if (!target) return
+  if (
+    reviewOriginStatus.value !== PIC_REVIEW_STATUS.REVIEWING &&
+    reviewForm.reviewStatus === reviewOriginStatus.value
+  ) {
+    message.warning('审核状态未改变，请选择不同的审核结果')
+    return
+  }
+  if (reviewNeedMessage.value && !reviewForm.reviewMessage.trim()) {
+    message.warning('拒绝时请填写审核意见')
+    return
+  }
+  reviewLoading.value = true
+  try {
+    await reviewPicture({
+      id: target.id,
+      reviewStatus: reviewForm.reviewStatus,
+      reviewMessage: reviewForm.reviewMessage.trim(),
+    })
+    message.success('审核完成')
+    reviewVisible.value = false
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '审核失败')
+  } finally {
+    reviewLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchDetail()
   fetchTagCategory()
@@ -271,6 +345,10 @@ onMounted(() => {
             免费下载
           </a-button>
           <template v-if="canManage">
+            <a-button @click="openReview">
+              <template #icon><AuditOutlined /></template>
+              审核
+            </a-button>
             <a-button @click="openEdit">
               <template #icon><EditOutlined /></template>
               编辑
@@ -304,6 +382,34 @@ onMounted(() => {
       </template>
     </a-result>
   </a-spin>
+
+  <a-modal
+    v-model:open="reviewVisible"
+    :title="reviewTitle"
+    ok-text="提交"
+    cancel-text="取消"
+    :confirm-loading="reviewLoading"
+    centered
+    @ok="handleReviewSubmit"
+  >
+    <a-form layout="vertical">
+      <a-form-item label="审核结果" required>
+        <a-radio-group v-model:value="reviewForm.reviewStatus">
+          <a-radio :value="PIC_REVIEW_STATUS.PASS">通过</a-radio>
+          <a-radio :value="PIC_REVIEW_STATUS.REJECT">拒绝</a-radio>
+        </a-radio-group>
+      </a-form-item>
+      <a-form-item label="审核意见" :required="reviewNeedMessage">
+        <a-textarea
+          v-model:value="reviewForm.reviewMessage"
+          :placeholder="reviewNeedMessage ? '请填写拒绝原因' : '选填'"
+          :rows="3"
+          :maxlength="200"
+          show-count
+        />
+      </a-form-item>
+    </a-form>
+  </a-modal>
 
   <a-modal
     v-model:open="reuploadVisible"

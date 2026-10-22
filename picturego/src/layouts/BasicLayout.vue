@@ -99,9 +99,14 @@ function handleUserMenuClick({ key }: { key: string }) {
       okText: '确定',
       cancelText: '取消',
       onOk: async () => {
-        await userStore.logout()
+        try {
+          await userStore.logout()
+        } catch (error) {
+          console.warn('退出登录异常，仍跳转登录页', error)
+        }
         message.success('已退出登录')
-        router.replace({ name: 'login' })
+        // 退出接口可能失败（会话已失效），这里保证一定回到登录页
+        await router.replace({ name: 'login' })
       },
     })
   }

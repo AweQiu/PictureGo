@@ -43,6 +43,9 @@ export const useUserStore = defineStore('user', {
     async logout() {
       try {
         await userLogout()
+      } catch (error) {
+        // 会话可能已失效（后端重启/超时），此时仍按已退出处理
+        console.warn('退出登录请求失败，按本地退出处理', error)
       } finally {
         this.loginUser = null
         this.hasFetched = true
