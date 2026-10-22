@@ -16,6 +16,16 @@ export function getPictureVOById(id: number | string) {
   return request.get<unknown, PictureVO>('/picture/get/vo', { params: { id } })
 }
 
+/** 上传图片：不传 id 时新建，传 id 时替换该图片的文件 */
+export function uploadPicture(file: File, id?: number | string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post<unknown, PictureVO>('/picture/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params: id ? { id } : undefined,
+  })
+}
+
 export function updatePicture(data: PictureUpdateRequest) {
   return request.post<unknown, boolean>('/picture/update', data)
 }

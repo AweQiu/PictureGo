@@ -3,11 +3,11 @@ import { computed, h, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Modal, message } from 'ant-design-vue'
 import {
+  CloudUploadOutlined,
   DownOutlined,
   HomeOutlined,
   LogoutOutlined,
   PictureOutlined,
-  PlusOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue'
@@ -22,7 +22,10 @@ const userStore = useUserStore()
 const selectedKeys = computed(() => [route.name as string])
 
 const menuItems = computed(() => {
-  const items = [{ key: 'home', label: '首页', icon: () => h(HomeOutlined) }]
+  const items = [
+    { key: 'home', label: '首页', icon: () => h(HomeOutlined) },
+    { key: 'pictureUpload', label: '上传图片', icon: () => h(CloudUploadOutlined) },
+  ]
   if (userStore.isAdmin) {
     items.push(
       { key: 'pictureManage', label: '图片管理', icon: () => h(PictureOutlined) },
@@ -104,12 +107,7 @@ function handleUserMenuClick({ key }: { key: string }) {
   }
 }
 
-// ---------- 创建图片 ----------
-function handleCreatePicture() {
-  // 上传页尚未开发，保留入口占位；开发后改为 router.push({ name: 'pictureUpload' })
-  message.info('创建图片页面开发中')
-}
-</script>
+// ---------- 用户下拉菜单 ----------</script>
 
 <template>
   <a-layout class="basic-layout">
@@ -126,10 +124,6 @@ function handleCreatePicture() {
         @click="handleMenuClick"
       />
       <div class="header-right">
-        <a-button type="primary" class="create-btn" @click="handleCreatePicture">
-          <template #icon><PlusOutlined /></template>
-          创建图片
-        </a-button>
         <a-dropdown placement="bottomRight" :trigger="['click']">
           <div class="user-info">
             <UserAvatar :src="userStore.loginUser?.userAvatar" :size="36" />
@@ -244,10 +238,6 @@ function handleCreatePicture() {
   align-items: center;
   flex-shrink: 0;
   gap: 16px;
-}
-
-.create-btn {
-  flex-shrink: 0;
 }
 
 .user-info {

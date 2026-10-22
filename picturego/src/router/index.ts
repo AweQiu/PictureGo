@@ -22,6 +22,12 @@ const router = createRouter({
           meta: { title: '首页' },
         },
         {
+          path: 'upload',
+          name: 'pictureUpload',
+          component: () => import('../pages/PictureUploadPage.vue'),
+          meta: { title: '上传图片' },
+        },
+        {
           path: 'user-manage',
           name: 'userManage',
           component: () => import('../pages/UserManagePage.vue'),
