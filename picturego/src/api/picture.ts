@@ -26,6 +26,11 @@ export function uploadPicture(file: File, id?: number | string) {
   })
 }
 
+/** 通过 URL 上传图片：不传 id 时新建，传 id 时替换该图片的文件 */
+export function uploadPictureByUrl(data: PictureUploadRequest) {
+  return request.post<unknown, PictureVO>('/picture/upload/url', data)
+}
+
 export function updatePicture(data: PictureUpdateRequest) {
   return request.post<unknown, boolean>('/picture/update', data)
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
-import { uploadPicture } from '../api/picture'
+import { uploadPicture, uploadPictureByUrl } from '../api/picture'
 import { formatFileSize } from '../utils/format'
 
 /** 已选择、待确认上传的图片 */
@@ -49,6 +49,34 @@ async function handleConfirm() {
   }
 }
 
+// ---------- URL 上传 ----------
+const imageUrl = ref('')
+const urlUploading = ref(false)
+const canUrlUpload = computed(() => !!imageUrl.value?.trim() && !uploading.value)
+
+async function handleUrlUpload() {
+  const url = imageUrl.value?.trim()
+  if (!url) {
+    message.warning('请输入图片链接')
+    return
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    message.warning('请输入 http:// 或 https:// 开头的图片链接')
+    return
+  }
+  urlUploading.value = true
+  try {
+    // 与后端 /picture/upload/url 对齐：只提交 url，其余信息由后端解析
+    await uploadPictureByUrl({ url })
+    message.success('图片上传成功')
+    imageUrl.value = ''
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '图片上传失败')
+  } finally {
+    urlUploading.value = false
+  }
+}
+
 onBeforeUnmount(clearSelection)
 </script>
 
@@ -91,6 +119,25 @@ onBeforeUnmount(clearSelection)
           重新选择
         </a-button>
       </div>
+    </div>
+
+    <a-divider class="upload-divider">或通过 URL 上传</a-divider>
+    <div class="url-row">
+      <a-input
+        v-model:value="imageUrl"
+        placeholder="请输入 http:// 或 https:// 开头的图片链接"
+        :disabled="urlUploading || uploading"
+        allow-clear
+        @press-enter="handleUrlUpload"
+      />
+      <a-button
+        type="primary"
+        :loading="urlUploading"
+        :disabled="!canUrlUpload"
+        @click="handleUrlUpload"
+      >
+        URL 上传
+      </a-button>
     </div>
   </a-card>
 </template>
@@ -164,6 +211,21 @@ onBeforeUnmount(clearSelection)
   margin-left: auto;
 }
 
+.upload-divider {
+  margin: 20px 0 16px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.url-row {
+  display: flex;
+  gap: 12px;
+}
+
+.url-row :deep(.ant-input-affix-wrapper) {
+  flex: 1;
+}
+
 @media (max-width: 600px) {
   .upload-footer {
     flex-direction: column;
@@ -172,6 +234,10 @@ onBeforeUnmount(clearSelection)
 
   .file-actions {
     margin-left: 0;
+  }
+
+  .url-row {
+    flex-direction: column;
   }
 }
 </style>

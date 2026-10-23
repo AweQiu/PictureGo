@@ -178,6 +178,11 @@ interface PictureUpdateRequest {
   tags?: string[]
 }
 
+interface PictureUploadRequest {
+  id?: number | string
+  url?: string
+}
+
 interface PictureReviewRequest {
   id?: number | string
   reviewStatus?: number
