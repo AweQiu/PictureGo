@@ -111,6 +111,7 @@ const columns = [
 ]
 
 const roleColorMap: Record<string, string> = {
+  [USER_ROLE.SUPERADMIN]: 'red',
   [USER_ROLE.ADMIN]: 'blue',
   [USER_ROLE.USER]: 'default',
 }

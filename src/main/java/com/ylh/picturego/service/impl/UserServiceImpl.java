@@ -124,6 +124,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean isAdmin(User user) {
         return user != null && UserRoleEnum.ADMIN.getLevel() <= UserRoleEnum.getEnumByValue(user.getUserRole()).getLevel();
     }
+
+    @Override
+    public boolean canManageUser(User loginUser, User targetUser) {
+        if (loginUser == null || targetUser == null) {
+            return false;
+        }
+        // 本人操作放行
+        if (loginUser.getId().equals(targetUser.getId())) {
+            return true;
+        }
+        UserRoleEnum loginRole = UserRoleEnum.getEnumByValue(loginUser.getUserRole());
+        UserRoleEnum targetRole = UserRoleEnum.getEnumByValue(targetUser.getUserRole());
+        // 角色无法识别时拒绝（fail-closed）
+        if (loginRole == null || targetRole == null) {
+            return false;
+        }
+        // 必须严格高于目标用户等级，平级不可操作
+        return loginRole.getLevel() > targetRole.getLevel();
+    }
 }
 
 

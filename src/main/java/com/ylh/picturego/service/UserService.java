@@ -60,4 +60,12 @@ public interface UserService extends IService<User> {
      * @return 是否是管理员
      */
     boolean isAdmin(User user);
+
+    /**
+     * 是否有权限管理该用户
+     * @param loginUser 登录用户
+     * @param targetUser 目标用户
+     * @return 是否有权限
+     */
+    boolean canManageUser(User loginUser, User targetUser);
 }

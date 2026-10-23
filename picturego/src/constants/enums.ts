@@ -2,16 +2,19 @@
 export const USER_ROLE = {
   USER: 'user',
   ADMIN: 'admin',
+  SUPERADMIN: 'superadmin',
 } as const
 
 export const USER_ROLE_OPTIONS = [
   { value: USER_ROLE.USER, label: '普通用户' },
   { value: USER_ROLE.ADMIN, label: '管理员' },
+  { value: USER_ROLE.SUPERADMIN, label: '超级管理员' },
 ]
 
 export const USER_ROLE_TEXT: Record<string, string> = {
   [USER_ROLE.USER]: '普通用户',
   [USER_ROLE.ADMIN]: '管理员',
+  [USER_ROLE.SUPERADMIN]: '超级管理员',
 }
 
 /** 图片审核状态 */
