@@ -11,8 +11,10 @@ export const useUserStore = defineStore('user', {
   }),
   getters: {
     isLogin: (state): boolean => state.loginUser !== null,
+    /** 管理员及以上（含超级管理员），用于管理入口与权限放行 */
     isAdmin(): boolean {
-      return this.loginUser?.userRole === USER_ROLE.ADMIN
+      const role = this.loginUser?.userRole
+      return role === USER_ROLE.ADMIN || role === USER_ROLE.SUPERADMIN
     },
     /** 展示名：用户名缺省时回退到账号 */
     displayName(): string {

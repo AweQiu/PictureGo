@@ -4,10 +4,13 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpStatus;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.http.Method;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
-import com.qcloud.cos.model.ciModel.persistence.OriginalInfo;
-import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.config.CosClientConfig;
 import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
@@ -19,12 +22,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
 @Slf4j
 @Service
+@Deprecated
 public class FileManager {
 
     @Resource
@@ -33,8 +39,11 @@ public class FileManager {
     @Resource
     private CosClientConfig cosClientConfig;
 
+    private final List<String> ALLOWED_FORMATS = Arrays.asList("png", "jpg", "jpeg", "gif", "webp");
+    private final long ONE_M = 1024 * 1024;
+
     /**
-     * 上传图片到对象存储
+     * 上传本地图片到对象存储
      * @param multipartFile 文件
      * @param uploadPathPrefix 上传路径前缀
      * @return 上传结果
@@ -42,10 +51,9 @@ public class FileManager {
     public UploadResult uploadPicture(MultipartFile multipartFile, String uploadPathPrefix) {
         // 校验图片
         validPicture(multipartFile);
-        // 图片上传
+        // 自定义上传的文件名，避免冲突增加安全性
         String uuid = RandomUtil.randomString(16);
         String originalFilename = multipartFile.getOriginalFilename();
-        // 自定义上传的文件名，避免冲突增加安全性
         String uploadFilename = String.format("%s_%s.%s",
                 DateUtil.formatDate(new Date()),
                 uuid,
@@ -84,6 +92,19 @@ public class FileManager {
     }
 
     /**
+     * 上传网络图片到对象存储
+     * @param url 图片url
+     * @param uploadPathPrefix 上传路径前缀
+     * @return 上传结果
+     */
+    public UploadResult uploadPictureByUrl(String url, String uploadPathPrefix) {
+        // 校验图片url
+        validPicture(url);
+
+        return null;
+    }
+
+    /**
      * 校验图片
      * @param multipartFile 文件
      */
@@ -91,12 +112,61 @@ public class FileManager {
         ThrowUtils.throwException(multipartFile == null, ErrorCode.PARAMS_ERROR, "图片不能为空");
         // 校验文件大小
         long fileSize = multipartFile.getSize();
-        final long ONE_M = 1024 * 1024;
         ThrowUtils.throwException(fileSize > 5 * ONE_M, ErrorCode.PARAMS_ERROR, "文件大小不能超过 5M");
         // 校验文件后缀
         String fileSuffix = FileUtil.getSuffix(multipartFile.getOriginalFilename());
-        final List<String> ALLOWED_FORMATS = Arrays.asList("png", "jpg", "jpeg", "gif", "webp");
-        ThrowUtils.throwException(!ALLOWED_FORMATS.contains(fileSuffix), ErrorCode.PARAMS_ERROR, "文件后缀只能是 png, jpg, jpeg, gif");
+        ThrowUtils.throwException(!ALLOWED_FORMATS.contains(fileSuffix), ErrorCode.PARAMS_ERROR, "文件后缀只能是 png, jpg, jpeg, gif, webp");
+    }
+
+    /**
+     * 校验图片
+     * @param url 图片url
+     */
+    private void validPicture(String url) {
+        ThrowUtils.throwException(StrUtil.isBlank(url), ErrorCode.PARAMS_ERROR, "图片url不能为空");
+        // 校验url格式
+        try {
+            new URL(url);
+        } catch (MalformedURLException e) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片url格式错误");
+        }
+        // 校验url协议
+        String protocol = url.split(":")[0];
+        ThrowUtils.throwException(!"http".equals(protocol) && !"https".equals(protocol), ErrorCode.PARAMS_ERROR, "图片url仅支持http或https协议");
+        // 发送head请求确认文件存在
+        HttpResponse httpResponse = null;
+        try {
+            httpResponse = HttpUtil.createRequest(Method.HEAD, url).execute();
+            // 如果返回状态不是200，则不执行后续逻辑（某些服务器不支持get外的请求）
+            if (httpResponse.getStatus() != HttpStatus.HTTP_OK) return;
+            // 校验文件大小
+            String contentLength = httpResponse.header("Content-Length");
+            if (StrUtil.isNotBlank(contentLength)) {
+                try {
+                    long fileSize = Long.parseLong(contentLength);
+                    ThrowUtils.throwException(fileSize > 5 * ONE_M, ErrorCode.PARAMS_ERROR, "文件大小不能超过 5M");
+                } catch (NumberFormatException e) {
+                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小格式错误");
+                }
+            }
+            // 校验文件类型
+            String contentType = httpResponse.header("Content-Type");
+            if (StrUtil.isNotBlank(contentType)) {
+                // 去掉可能携带的参数部分
+                String mediaType = StrUtil.subBefore(contentType, ";", false);
+                // 取最后的后缀
+                String subType = StrUtil.subAfter(mediaType, "/", true);
+                ThrowUtils.throwException(!ALLOWED_FORMATS.contains(subType), ErrorCode.PARAMS_ERROR, "文件后缀只能是 png, jpg, jpeg, gif, webp");
+            }
+        }finally {
+            // 释放资源
+            if (httpResponse != null) {
+                httpResponse.close();
+            }
+        }
+
+
+
     }
 
     /**

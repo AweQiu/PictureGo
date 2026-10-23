@@ -40,7 +40,7 @@ public class PictureController {
     private PictureService pictureService;
 
     /**
-     * 上传图片到数据库和对象存储（可重复上传）
+     * 上传本地图片（可重复上传）
      * @param file 文件分片
      * @param pictureUploadRequest 图片上传请求
      * @param request 请求
@@ -54,6 +54,23 @@ public class PictureController {
     ) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(file, pictureUploadRequest, loginUser);
+        return ResultUtils.success(pictureVO);
+    }
+
+    /**
+     * 上传网络图片（可重复上传）
+     * @param pictureUploadRequest 图片上传请求
+     * @param request 请求
+     * @return 图片信息
+     */
+    @PostMapping("/upload/url")
+    public Result<PictureVO> uploadPictureByUrl(
+            @RequestBody PictureUploadRequest pictureUploadRequest,
+            HttpServletRequest request
+    ) {
+        User loginUser = userService.getLoginUser(request);
+        String url = pictureUploadRequest.getUrl();
+        PictureVO pictureVO = pictureService.uploadPicture(url, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
     }
 

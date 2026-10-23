@@ -9,6 +9,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.FileManager;
+import com.ylh.picturego.manager.upload.FilePictureUpload;
+import com.ylh.picturego.manager.upload.PictureUploadTemplate;
+import com.ylh.picturego.manager.upload.UrlPictureUpload;
 import com.ylh.picturego.model.dto.file.UploadResult;
 import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
 import com.ylh.picturego.model.dto.picture.PictureReviewRequest;
@@ -41,10 +44,13 @@ import java.util.stream.Collectors;
 public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> implements PictureService {
 
     @Resource
-    private FileManager fileManager;
+    private UserService userService;
 
     @Resource
-    private UserService userService;
+    private FilePictureUpload filePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
 
     @Override
     public void validPicture(Picture picture) {
@@ -64,7 +70,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         // 校验参数
         ThrowUtils.throwException(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
         // 判断新增还是修改
@@ -85,7 +91,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         }
         // 上传图片，按照用户id划分目录
         String uploadPathPrefix = String.format("/public/%s", loginUser.getId());
-        UploadResult uploadResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        // 根据inputSource的类型，区分上传方式
+        // 默认使用文件上传方式
+        PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+        if (inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+        UploadResult uploadResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         // 构造图片信息
         Picture newPicture = Picture.builder()
                 .url(uploadResult.getUrl())
