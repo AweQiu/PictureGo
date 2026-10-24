@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
 import com.ylh.picturego.model.dto.picture.PictureReviewRequest;
+import com.ylh.picturego.model.dto.picture.PictureUploadByBatchRequest;
 import com.ylh.picturego.model.dto.picture.PictureUploadRequest;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
@@ -72,4 +73,12 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser 登录用户
      */
     void fillReviewParams(Picture picture, User loginUser);
+
+    /**
+     * 批量上传图片
+     * @param pictureUploadByBatchRequest 图片批量上传请求
+     * @param loginUser 登录用户
+     * @return 图片数量
+     */
+    Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
 }

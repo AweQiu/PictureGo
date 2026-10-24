@@ -183,6 +183,12 @@ interface PictureUploadRequest {
   url?: string
 }
 
+interface PictureUploadByBatchRequest {
+  searchText?: string
+  count?: number
+  namePrefix?: string
+}
+
 interface PictureReviewRequest {
   id?: number | string
   reviewStatus?: number

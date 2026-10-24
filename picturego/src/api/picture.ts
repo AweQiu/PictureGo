@@ -31,6 +31,10 @@ export function uploadPictureByUrl(data: PictureUploadRequest) {
   return request.post<unknown, PictureVO>('/picture/upload/url', data)
 }
 
+export function uploadPictureByBatch(data: PictureUploadByBatchRequest) {
+  return request.post<unknown, number>('/picture/upload/batch', data)
+}
+
 export function updatePicture(data: PictureUpdateRequest) {
   return request.post<unknown, boolean>('/picture/update', data)
 }

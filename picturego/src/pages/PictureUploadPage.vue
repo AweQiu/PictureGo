@@ -2,8 +2,11 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
-import { uploadPicture, uploadPictureByUrl } from '../api/picture'
+import { uploadPicture, uploadPictureByBatch, uploadPictureByUrl } from '../api/picture'
+import { useUserStore } from '../store/user'
 import { formatFileSize } from '../utils/format'
+
+const userStore = useUserStore()
 
 /** 已选择、待确认上传的图片 */
 const selectedFile = ref<File | null>(null)
@@ -78,6 +81,39 @@ async function handleUrlUpload() {
   }
 }
 
+const batchSearchText = ref('')
+const batchCount = ref(5)
+const batchNamePrefix = ref('')
+const batchUploading = ref(false)
+const canBatchUpload = computed(
+  () => !!batchSearchText.value.trim() && typeof batchCount.value === 'number' && batchCount.value >= 1,
+)
+
+async function handleBatchUpload() {
+  const searchText = batchSearchText.value.trim()
+  if (!searchText) {
+    message.warning('请输入搜索关键词')
+    return
+  }
+  if (!batchCount.value || batchCount.value < 1) {
+    message.warning('请输入有效的图片数量')
+    return
+  }
+  batchUploading.value = true
+  try {
+    const uploadedCount = await uploadPictureByBatch({
+      searchText,
+      count: batchCount.value,
+      namePrefix: batchNamePrefix.value.trim() || undefined,
+    })
+    message.success(`批量上传完成，成功上传 ${uploadedCount} 张图片`)
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '批量上传失败')
+  } finally {
+    batchUploading.value = false
+  }
+}
+
 onBeforeUnmount(clearSelection)
 </script>
 
@@ -146,6 +182,51 @@ onBeforeUnmount(clearSelection)
           </div>
           <p class="url-hint">图片的名称、尺寸、格式等信息将由后端自动解析</p>
         </div>
+      </a-tab-pane>
+
+      <a-tab-pane v-if="userStore.isAdmin" key="batch" tab="批量上传">
+        <a-form layout="vertical" class="batch-form">
+          <a-alert
+            type="info"
+            show-icon
+            message="根据关键词搜索并批量上传图片，图片信息将由后端自动解析"
+            class="batch-tip"
+          />
+          <a-form-item label="搜索关键词" required>
+            <a-input
+              v-model:value="batchSearchText"
+              placeholder="请输入图片搜索关键词，如：风景"
+              :disabled="batchUploading"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="图片数量" required>
+            <a-input-number
+              v-model:value="batchCount"
+              :min="1"
+              :max="30"
+              :precision="0"
+              :disabled="batchUploading"
+              class="batch-count"
+            />
+          </a-form-item>
+          <a-form-item label="名称前缀">
+            <a-input
+              v-model:value="batchNamePrefix"
+              placeholder="请输入图片名称前缀（可选）"
+              :disabled="batchUploading"
+              allow-clear
+            />
+          </a-form-item>
+          <a-button
+            type="primary"
+            :loading="batchUploading"
+            :disabled="!canBatchUpload"
+            @click="handleBatchUpload"
+          >
+            批量上传
+          </a-button>
+        </a-form>
       </a-tab-pane>
     </a-tabs>
   </a-card>
@@ -237,6 +318,19 @@ onBeforeUnmount(clearSelection)
   margin: 10px 0 0;
   font-size: 12px;
   color: #8c8c8c;
+}
+
+.batch-form {
+  max-width: 560px;
+  padding: 12px 0 8px;
+}
+
+.batch-tip {
+  margin-bottom: 24px;
+}
+
+.batch-count {
+  width: 100%;
 }
 
 @media (max-width: 600px) {

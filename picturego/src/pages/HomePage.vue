@@ -15,6 +15,7 @@ const pagination = reactive({
   current: 1,
   pageSize: 12,
 })
+const customPageSize = ref<number>(pagination.pageSize)
 
 const queryForm = reactive({
   searchText: '',
@@ -90,6 +91,20 @@ function handleReset() {
 
 function handlePageChange(page: number, pageSize: number) {
   pagination.current = page
+  pagination.pageSize = pageSize
+  customPageSize.value = pageSize
+  fetchData()
+}
+
+function handleCustomPageSize() {
+  if (typeof customPageSize.value !== 'number') {
+    customPageSize.value = pagination.pageSize
+    return
+  }
+  const pageSize = Math.min(20, Math.max(1, Math.round(customPageSize.value)))
+  customPageSize.value = pageSize
+  if (pageSize === pagination.pageSize) return
+  pagination.current = 1
   pagination.pageSize = pageSize
   fetchData()
 }
@@ -202,15 +217,27 @@ onMounted(() => {
       </div>
     </a-spin>
 
-    <div v-if="total > pagination.pageSize" class="gallery-pagination">
+    <div v-if="total > 0" class="gallery-pagination">
       <a-pagination
         :current="pagination.current"
         :page-size="pagination.pageSize"
         :total="total"
         show-quick-jumper
-        :page-size-options="['12', '24', '48']"
         @change="handlePageChange"
       />
+      <div class="page-size-control">
+        <span>每页</span>
+        <a-input-number
+          v-model:value="customPageSize"
+          :min="1"
+          :max="20"
+          :precision="0"
+          size="small"
+          aria-label="每页图片数量"
+          @change="handleCustomPageSize"
+        />
+        <span>张</span>
+      </div>
     </div>
   </div>
 </template>
@@ -409,7 +436,22 @@ onMounted(() => {
 
 .gallery-pagination {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+  gap: 16px;
   margin-top: 24px;
+}
+
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #5e6d82;
+}
+
+.page-size-control :deep(.ant-input-number) {
+  width: 64px;
 }
 </style>

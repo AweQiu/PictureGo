@@ -40,7 +40,7 @@ public class PictureController {
     private PictureService pictureService;
 
     /**
-     * 上传本地图片（可重复上传）
+     * 上传本地图片
      * @param file 文件分片
      * @param pictureUploadRequest 图片上传请求
      * @param request 请求
@@ -58,7 +58,7 @@ public class PictureController {
     }
 
     /**
-     * 上传网络图片（可重复上传）
+     * 上传网络图片
      * @param pictureUploadRequest 图片上传请求
      * @param request 请求
      * @return 图片信息
@@ -72,6 +72,24 @@ public class PictureController {
         String url = pictureUploadRequest.getUrl();
         PictureVO pictureVO = pictureService.uploadPicture(url, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
+    }
+
+    /**
+     * 批量上传图片
+     * @param pictureUploadByBatchRequest 图片上传请求
+     * @param request 请求
+     * @return 图片信息
+     */
+    @PostMapping("/upload/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public Result<Integer> uploadPictureByBatch(
+            @RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
+            HttpServletRequest request
+    ) {
+        ThrowUtils.throwException(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        Integer uploadedCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
+        return ResultUtils.success(uploadedCount);
     }
 
     /**
