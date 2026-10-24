@@ -16,17 +16,23 @@ export function getPictureVOById(id: number | string) {
   return request.get<unknown, PictureVO>('/picture/get/vo', { params: { id } })
 }
 
-/** 上传图片：不传 id 时新建，传 id 时替换该图片的文件 */
-export function uploadPicture(file: File, id?: number | string) {
+/** 上传图片：不传 id 时新建，传 id 时替换该图片的文件；可选携带图片信息 */
+export function uploadPicture(file: File, data: PictureUploadRequest = {}) {
   const formData = new FormData()
   formData.append('file', file)
+  if (data.id !== undefined && data.id !== null) {
+    formData.append('id', String(data.id))
+  }
+  if (data.name) formData.append('name', data.name)
+  if (data.introduction) formData.append('introduction', data.introduction)
+  if (data.category) formData.append('category', data.category)
+  data.tags?.forEach((tag) => formData.append('tags', tag))
   return request.post<unknown, PictureVO>('/picture/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    params: id ? { id } : undefined,
   })
 }
 
-/** 通过 URL 上传图片：不传 id 时新建，传 id 时替换该图片的文件 */
+/** 通过 URL 上传图片：不传 id 时新建，传 id 时替换该图片的文件；可选携带图片信息 */
 export function uploadPictureByUrl(data: PictureUploadRequest) {
   return request.post<unknown, PictureVO>('/picture/upload/url', data)
 }

@@ -181,6 +181,10 @@ interface PictureUpdateRequest {
 interface PictureUploadRequest {
   id?: number | string
   url?: string
+  name?: string
+  introduction?: string
+  category?: string
+  tags?: string[]
 }
 
 interface PictureUploadByBatchRequest {

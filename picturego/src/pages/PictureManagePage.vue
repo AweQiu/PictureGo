@@ -232,7 +232,7 @@ async function handleReupload(file: File) {
   }
   reuploading.value = true
   try {
-    await uploadPicture(file, target.id)
+    await uploadPicture(file, { id: target.id })
     message.success('图片已重新上传')
     reuploadVisible.value = false
     fetchData()

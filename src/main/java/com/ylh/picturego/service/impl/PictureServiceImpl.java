@@ -3,6 +3,7 @@ package com.ylh.picturego.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -81,13 +82,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 校验参数
         ThrowUtils.throwException(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
         // 判断新增还是修改
-        Long picId = null;
-        if (pictureUploadRequest != null) {
-            picId = pictureUploadRequest.getId();
-        }
+        Long picId = pictureUploadRequest == null ? null : pictureUploadRequest.getId();
+        boolean isUpdate = picId != null && picId > 0;
         // 如果是修改，则校验图片是否存在
-        if (picId != null) {
-            Picture oldPicture = this.getById(picId);
+        Picture oldPicture = null;
+        if (isUpdate) {
+            oldPicture = this.getById(picId);
             ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
             // 仅允许用户自己和管理员修改图片
             ThrowUtils.throwException(
@@ -116,9 +116,20 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                 .picFormat(uploadResult.getPicFormat())
                 .userId(loginUser.getId())
                 .build();
-        // 支持外层传递图片名称
-        if (pictureUploadRequest != null && pictureUploadRequest.getPicName() != null) {
-            newPicture.setName(pictureUploadRequest.getPicName());
+        // 逐字段填充扩展参数：外层传了才覆盖，未传则保留上传解析值
+        if (pictureUploadRequest != null) {
+            if (StrUtil.isNotBlank(pictureUploadRequest.getName())) {
+                newPicture.setName(pictureUploadRequest.getName());
+            }
+            if (pictureUploadRequest.getIntroduction() != null) {
+                newPicture.setIntroduction(pictureUploadRequest.getIntroduction());
+            }
+            if (pictureUploadRequest.getCategory() != null) {
+                newPicture.setCategory(pictureUploadRequest.getCategory());
+            }
+            if (CollUtil.isNotEmpty(pictureUploadRequest.getTags())) {
+                newPicture.setTags(JSONUtil.toJsonStr(pictureUploadRequest.getTags()));
+            }
         }
         // 补充审核参数
         this.fillReviewParams(newPicture, loginUser);
@@ -326,7 +337,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             fileUrl = StrUtil.subBefore(fileUrl, "?", false);
             // 上传图片
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
-            pictureUploadRequest.setPicName(namePrefix + "_" + (uploadedCount + 1));
+            pictureUploadRequest.setName(namePrefix + "_" + (uploadedCount + 1));
             pictureUploadRequest.setUrl(fileUrl);
             try {
                 PictureVO pictureVO = uploadPicture(fileUrl, pictureUploadRequest, loginUser);

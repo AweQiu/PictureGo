@@ -37,9 +37,7 @@ public class UrlPictureUpload extends PictureUploadTemplate {
         String protocol = url.split(":")[0];
         ThrowUtils.throwException(!"http".equals(protocol) && !"https".equals(protocol), ErrorCode.PARAMS_ERROR, "图片url仅支持http或https协议");
         // 发送head请求确认文件存在
-        HttpResponse httpResponse = null;
-        try {
-            httpResponse = HttpUtil.createRequest(Method.HEAD, url).execute();
+        try (HttpResponse httpResponse = HttpUtil.createRequest(Method.HEAD, url).execute()) {
             // 如果返回状态不是200，则不执行后续逻辑（某些服务器不支持get外的请求）
             if (httpResponse.getStatus() != HttpStatus.HTTP_OK) return;
             // 校验文件大小
@@ -61,11 +59,6 @@ public class UrlPictureUpload extends PictureUploadTemplate {
                 String subType = StrUtil.subAfter(mediaType, "/", true);
                 ThrowUtils.throwException(!ALLOWED_FORMATS.contains(subType), ErrorCode.PARAMS_ERROR, "文件后缀只能是 png, jpg, jpeg, gif, webp");
             }
-        }finally {
-            // 释放资源
-            if (httpResponse != null) {
-                httpResponse.close();
-            }
         }
     }
 
@@ -79,6 +72,8 @@ public class UrlPictureUpload extends PictureUploadTemplate {
     @Override
     protected String getOriginalFilename(Object inputSource) {
         String url = (String) inputSource;
-        return FileUtil.mainName(url);
+        String cleanUrl = StrUtil.subBefore(url, "?", false);
+        cleanUrl = StrUtil.subBefore(cleanUrl, "#", false);
+        return FileUtil.getName(cleanUrl);
     }
 }

@@ -1,18 +1,67 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import { InboxOutlined } from '@ant-design/icons-vue'
-import { uploadPicture, uploadPictureByBatch, uploadPictureByUrl } from '../api/picture'
+import {
+  listPictureTagCategory,
+  uploadPicture,
+  uploadPictureByBatch,
+  uploadPictureByUrl,
+} from '../api/picture'
 import { useUserStore } from '../store/user'
 import { formatFileSize } from '../utils/format'
 
+interface PictureMetaForm {
+  name: string
+  introduction: string
+  category: string | undefined
+  tags: string[]
+}
+
+function createMetaForm(): PictureMetaForm {
+  return {
+    name: '',
+    introduction: '',
+    category: undefined,
+    tags: [],
+  }
+}
+
+function buildMetaPayload(meta: PictureMetaForm): PictureUploadRequest {
+  const introduction = meta.introduction.trim()
+  const tags = meta.tags.map((tag) => tag.trim()).filter(Boolean)
+  return {
+    name: meta.name.trim() || undefined,
+    introduction: introduction || undefined,
+    category: meta.category?.trim() || undefined,
+    tags: tags.length > 0 ? tags : undefined,
+  }
+}
+
+function resetMetaForm(meta: PictureMetaForm) {
+  Object.assign(meta, createMetaForm())
+}
+
 const userStore = useUserStore()
+const categoryOptions = ref<string[]>([])
+const tagOptions = ref<string[]>([])
+
+async function fetchTagCategory() {
+  try {
+    const data = await listPictureTagCategory()
+    categoryOptions.value = data.categories ?? []
+    tagOptions.value = data.tags ?? []
+  } catch (error) {
+    console.error('获取分类标签失败', error)
+  }
+}
 
 /** 已选择、待确认上传的图片 */
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref('')
 const uploading = ref(false)
 const activeTab = ref('file')
+const fileMeta = reactive(createMetaForm())
 
 function clearSelection() {
   if (previewUrl.value) {
@@ -20,6 +69,7 @@ function clearSelection() {
     previewUrl.value = ''
   }
   selectedFile.value = null
+  resetMetaForm(fileMeta)
 }
 
 /** 选择图片后只做本地预览，点击「确认上传」才真正调用上传接口 */
@@ -42,8 +92,7 @@ async function handleConfirm() {
   if (!selectedFile.value) return
   uploading.value = true
   try {
-    // 与后端 /picture/upload 对齐：只提交文件，其余信息由后端解析
-    await uploadPicture(selectedFile.value)
+    await uploadPicture(selectedFile.value, buildMetaPayload(fileMeta))
     message.success('图片上传成功')
     clearSelection()
   } catch (error) {
@@ -55,11 +104,34 @@ async function handleConfirm() {
 
 // ---------- URL 上传 ----------
 const imageUrl = ref('')
+const urlPreviewUrl = ref('')
+const urlPreviewLoaded = ref(false)
+const urlPreviewing = ref(false)
 const urlUploading = ref(false)
-const canUrlUpload = computed(() => !!imageUrl.value?.trim())
+const urlMeta = reactive(createMetaForm())
+const canPreviewUrl = computed(() => !!imageUrl.value?.trim())
+let urlPreviewToken = 0
+let urlPreviewTimer: ReturnType<typeof setTimeout> | undefined
 
-async function handleUrlUpload() {
-  const url = imageUrl.value?.trim()
+function clearPreviewTimer() {
+  if (urlPreviewTimer) {
+    clearTimeout(urlPreviewTimer)
+    urlPreviewTimer = undefined
+  }
+}
+
+function clearUrlSelection() {
+  urlPreviewToken += 1
+  clearPreviewTimer()
+  imageUrl.value = ''
+  urlPreviewUrl.value = ''
+  urlPreviewLoaded.value = false
+  urlPreviewing.value = false
+  resetMetaForm(urlMeta)
+}
+
+function handleUrlPreview() {
+  const url = imageUrl.value.trim()
   if (!url) {
     message.warning('请输入图片链接')
     return
@@ -68,12 +140,50 @@ async function handleUrlUpload() {
     message.warning('请输入 http:// 或 https:// 开头的图片链接')
     return
   }
+
+  clearPreviewTimer()
+  const token = ++urlPreviewToken
+  urlPreviewUrl.value = ''
+  urlPreviewLoaded.value = false
+  urlPreviewing.value = true
+
+  const image = new Image()
+  image.referrerPolicy = 'no-referrer'
+  image.onload = () => {
+    if (token !== urlPreviewToken) return
+    clearPreviewTimer()
+    urlPreviewing.value = false
+    urlPreviewLoaded.value = true
+    urlPreviewUrl.value = url
+    resetMetaForm(urlMeta)
+  }
+  image.onerror = () => {
+    if (token !== urlPreviewToken) return
+    clearPreviewTimer()
+    urlPreviewing.value = false
+    message.error('图片加载失败，请检查链接是否有效或图片是否允许外链访问')
+  }
+  urlPreviewTimer = setTimeout(() => {
+    if (token !== urlPreviewToken) return
+    urlPreviewing.value = false
+    message.error('图片加载超时，请检查链接后重试')
+  }, 15000)
+  image.src = url
+}
+
+async function handleUrlUpload() {
+  if (!urlPreviewLoaded.value || !urlPreviewUrl.value) {
+    message.warning('请先确认图片链接并加载成功')
+    return
+  }
   urlUploading.value = true
   try {
-    // 与后端 /picture/upload/url 对齐：只提交 url，其余信息由后端解析
-    await uploadPictureByUrl({ url })
+    await uploadPictureByUrl({
+      ...buildMetaPayload(urlMeta),
+      url: urlPreviewUrl.value,
+    })
     message.success('图片上传成功')
-    imageUrl.value = ''
+    clearUrlSelection()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '图片上传失败')
   } finally {
@@ -114,7 +224,11 @@ async function handleBatchUpload() {
   }
 }
 
-onBeforeUnmount(clearSelection)
+onMounted(fetchTagCategory)
+onBeforeUnmount(() => {
+  clearSelection()
+  clearUrlSelection()
+})
 </script>
 
 <template>
@@ -139,12 +253,55 @@ onBeforeUnmount(clearSelection)
           </template>
         </a-upload-dragger>
 
+        <a-form v-if="selectedFile" layout="vertical" class="meta-form">
+          <div class="meta-grid">
+            <a-form-item label="图片名称">
+              <a-input
+                v-model:value="fileMeta.name"
+                placeholder="选填，留空则由后端解析"
+                :disabled="uploading"
+                allow-clear
+              />
+            </a-form-item>
+            <a-form-item label="图片分类">
+              <a-auto-complete
+                v-model:value="fileMeta.category"
+                placeholder="选填，可选择或输入分类"
+                :options="categoryOptions.map((item) => ({ value: item }))"
+                :disabled="uploading"
+                allow-clear
+              />
+            </a-form-item>
+          </div>
+          <a-form-item label="图片简介">
+            <a-textarea
+              v-model:value="fileMeta.introduction"
+              placeholder="选填，最多 800 字"
+              :rows="3"
+              :maxlength="800"
+              show-count
+              :disabled="uploading"
+            />
+          </a-form-item>
+          <a-form-item label="图片标签">
+            <a-select
+              v-model:value="fileMeta.tags"
+              mode="tags"
+              placeholder="选填，可选择或输入标签"
+              :options="tagOptions.map((item) => ({ value: item, label: item }))"
+              :disabled="uploading"
+              allow-clear
+            />
+          </a-form-item>
+          <p class="meta-hint">以上信息均为选填，未填写的内容将由后端自动解析</p>
+        </a-form>
+
         <div class="upload-footer">
           <div v-if="selectedFile" class="file-info">
             <span class="file-name">{{ selectedFile.name }}</span>
             <span>{{ formatFileSize(selectedFile.size) }}</span>
           </div>
-          <span v-else class="file-hint">选择图片后可确认上传</span>
+          <span v-else class="file-hint">选择图片后可填写图片信息并上传</span>
           <div class="file-actions">
             <a-button
               type="primary"
@@ -167,20 +324,97 @@ onBeforeUnmount(clearSelection)
             <a-input
               v-model:value="imageUrl"
               placeholder="请输入 http:// 或 https:// 开头的图片链接"
-              :disabled="urlUploading"
+              :disabled="urlPreviewing || urlPreviewLoaded || urlUploading"
               allow-clear
-              @press-enter="handleUrlUpload"
+              @press-enter="handleUrlPreview"
             />
             <a-button
+              v-if="!urlPreviewLoaded"
               type="primary"
-              :loading="urlUploading"
-              :disabled="!canUrlUpload"
-              @click="handleUrlUpload"
+              :loading="urlPreviewing"
+              :disabled="!canPreviewUrl"
+              @click="handleUrlPreview"
             >
-              URL 上传
+              确认
             </a-button>
           </div>
-          <p class="url-hint">图片的名称、尺寸、格式等信息将由后端自动解析</p>
+          <p v-if="!urlPreviewLoaded" class="url-hint">
+            点击「确认」后先加载图片预览，加载成功再填写图片信息并上传
+          </p>
+
+          <div v-if="urlPreviewing" class="url-loading">
+            <a-spin size="small" />
+            <span>正在加载图片...</span>
+          </div>
+
+          <div v-if="urlPreviewLoaded" class="url-preview-area">
+            <img
+              :src="urlPreviewUrl"
+              :alt="urlMeta.name || 'URL 图片预览'"
+              class="url-preview"
+              referrerpolicy="no-referrer"
+            />
+
+            <a-form layout="vertical" class="meta-form">
+              <div class="meta-grid">
+                <a-form-item label="图片名称">
+                  <a-input
+                    v-model:value="urlMeta.name"
+                    placeholder="选填，留空则由后端解析"
+                    :disabled="urlUploading"
+                    allow-clear
+                  />
+                </a-form-item>
+                <a-form-item label="图片分类">
+                  <a-auto-complete
+                    v-model:value="urlMeta.category"
+                    placeholder="选填，可选择或输入分类"
+                    :options="categoryOptions.map((item) => ({ value: item }))"
+                    :disabled="urlUploading"
+                    allow-clear
+                  />
+                </a-form-item>
+              </div>
+              <a-form-item label="图片简介">
+                <a-textarea
+                  v-model:value="urlMeta.introduction"
+                  placeholder="选填，最多 800 字"
+                  :rows="3"
+                  :maxlength="800"
+                  show-count
+                  :disabled="urlUploading"
+                />
+              </a-form-item>
+              <a-form-item label="图片标签">
+                <a-select
+                  v-model:value="urlMeta.tags"
+                  mode="tags"
+                  placeholder="选填，可选择或输入标签"
+                  :options="tagOptions.map((item) => ({ value: item, label: item }))"
+                  :disabled="urlUploading"
+                  allow-clear
+                />
+              </a-form-item>
+              <p class="meta-hint">以上信息均为选填，未填写的内容将由后端自动解析</p>
+            </a-form>
+
+            <div class="upload-footer">
+              <span class="file-hint">图片已加载，可填写信息后确认上传</span>
+              <div class="file-actions">
+                <a-button
+                  type="primary"
+                  :loading="urlUploading"
+                  :disabled="urlPreviewing"
+                  @click="handleUrlUpload"
+                >
+                  确认上传
+                </a-button>
+                <a-button :disabled="urlUploading" @click="clearUrlSelection">
+                  重新选择
+                </a-button>
+              </div>
+            </div>
+          </div>
         </div>
       </a-tab-pane>
 
@@ -320,6 +554,49 @@ onBeforeUnmount(clearSelection)
   color: #8c8c8c;
 }
 
+.url-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 180px;
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.url-preview-area {
+  margin-top: 20px;
+}
+
+.url-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  margin: 0 auto 20px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.meta-form {
+  margin-top: 20px;
+  padding: 20px 20px 4px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+
+.meta-hint {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
 .batch-form {
   max-width: 560px;
   padding: 12px 0 8px;
@@ -345,6 +622,14 @@ onBeforeUnmount(clearSelection)
 
   .url-row {
     flex-direction: column;
+  }
+
+  .meta-form {
+    padding: 16px 16px 0;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

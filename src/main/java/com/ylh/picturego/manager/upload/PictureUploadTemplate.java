@@ -56,19 +56,27 @@ public abstract class PictureUploadTemplate {
         // 自定义上传的文件名，避免冲突增加安全性
         String uuid = RandomUtil.randomString(16);
         String originalFilename = getOriginalFilename(inputSource);
-        String uploadFilename = String.format("%s_%s.%s",
-                DateUtil.formatDate(new Date()),
-                uuid,
-                FileUtil.getSuffix(originalFilename)
-        );
-        String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
+//        String suffix = sanitizeSuffix(FileUtil.getSuffix(originalFilename));
+//        String uploadFilename = String.format("%s_%s.%s",
+//                DateUtil.formatDate(new Date()),
+//                uuid,
+//                suffix
+//        );
+//        String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
         // 解析结果
         File tempFile = null;
         try {
-            // 创建临时文件，获取文件到服务器
-            tempFile = File.createTempFile(uploadPath, null);
-            // 处理文件来源
+            // 创建临时文件，先把文件落盘（下载/转存），以便后续按真实内容判断后缀
+            tempFile = File.createTempFile("temp_" + uuid, null);
             processFile(inputSource, tempFile);
+            // 后缀：优先按文件名/URL 解析，取不到则按下载文件真实类型(魔数)兜底
+            String suffix = resolveSuffix(originalFilename, tempFile);
+            String uploadFilename = String.format("%s_%s.%s",
+                    DateUtil.formatDate(new Date()),
+                    uuid,
+                    suffix
+            );
+            String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
             // 上传图片到对象存储
             PutObjectResult putObjectResult = cosManager.uploadPicture(uploadPath, tempFile);
             // 获取图片信息，封装上传结果
@@ -129,12 +137,41 @@ public abstract class PictureUploadTemplate {
      * 删除临时文件
      * @param tempFile 临时文件
      */
-    public static void deleteTempFile(File tempFile) {
+    private static void deleteTempFile(File tempFile) {
         if (tempFile != null) {
             // 删除临时文件
             if (!tempFile.delete()) {
                 log.error("file delete failed, filepath: {}", tempFile.getPath());
             }
         }
+    }
+
+    /**
+     * 净化后缀：仅保留字母数字且必须在允许的图片格式白名单内，否则置空
+     * @param rawSuffix 原始后缀
+     * @return 合法后缀或空串
+     */
+    private String sanitizeSuffix(String rawSuffix) {
+        if (StrUtil.isBlank(rawSuffix)) {
+            return "";
+        }
+        String suffix = rawSuffix.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return ALLOWED_FORMATS.contains(suffix) ? suffix : "";
+    }
+
+    /**
+     * 解析对象存储后缀：先按文件名/URL，取不到再按下载文件真实内容(魔数)兜底
+     * @param originalFilename 原始文件名/URL末段
+     * @param tempFile 已落盘的文件
+     * @return 合法后缀或空串
+     */
+    private String resolveSuffix(String originalFilename, File tempFile) {
+        // 1) 先按文件名/URL 解析后缀
+        String suffix = sanitizeSuffix(FileUtil.getSuffix(originalFilename));
+        if (StrUtil.isNotBlank(suffix)) {
+            return suffix;
+        }
+        // 2) 兜底：按下载文件头部魔数识别真实类型（兼容无扩展名的 URL，如 CDN/Bing 直链）
+        return sanitizeSuffix(FileUtil.getType(tempFile));
     }
 }
