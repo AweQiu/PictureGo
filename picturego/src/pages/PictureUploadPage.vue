@@ -9,6 +9,7 @@ import { formatFileSize } from '../utils/format'
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref('')
 const uploading = ref(false)
+const activeTab = ref('file')
 
 function clearSelection() {
   if (previewUrl.value) {
@@ -52,7 +53,7 @@ async function handleConfirm() {
 // ---------- URL 上传 ----------
 const imageUrl = ref('')
 const urlUploading = ref(false)
-const canUrlUpload = computed(() => !!imageUrl.value?.trim() && !uploading.value)
+const canUrlUpload = computed(() => !!imageUrl.value?.trim())
 
 async function handleUrlUpload() {
   const url = imageUrl.value?.trim()
@@ -82,63 +83,71 @@ onBeforeUnmount(clearSelection)
 
 <template>
   <a-card :bordered="false" title="上传图片" class="upload-card">
-    <a-upload-dragger
-      accept="image/*"
-      :show-upload-list="false"
-      :before-upload="handleSelect"
-      :disabled="uploading"
-      class="upload-dragger"
-    >
-      <template v-if="selectedFile">
-        <img :src="previewUrl" :alt="selectedFile.name" class="upload-preview" />
-        <p class="dragger-text">点击或拖拽可更换图片</p>
-      </template>
-      <template v-else>
-        <p class="dragger-icon"><InboxOutlined /></p>
-        <p class="dragger-text">点击或拖拽图片到此处</p>
-        <p class="dragger-hint">支持 jpg / jpeg / gif / png / webp 等图片格式，大小不超过 5MB</p>
-      </template>
-    </a-upload-dragger>
-
-    <div class="upload-footer">
-      <div v-if="selectedFile" class="file-info">
-        <span class="file-name">{{ selectedFile.name }}</span>
-        <span>{{ formatFileSize(selectedFile.size) }}</span>
-      </div>
-      <span v-else class="file-hint">选择图片后可确认上传</span>
-      <div class="file-actions">
-        <a-button
-          type="primary"
-          :loading="uploading"
-          :disabled="!selectedFile"
-          @click="handleConfirm"
+    <a-tabs v-model:activeKey="activeTab">
+      <a-tab-pane key="file" tab="文件上传">
+        <a-upload-dragger
+          accept="image/*"
+          :show-upload-list="false"
+          :before-upload="handleSelect"
+          :disabled="uploading"
+          class="upload-dragger"
         >
-          确认上传
-        </a-button>
-        <a-button :disabled="!selectedFile || uploading" @click="clearSelection">
-          重新选择
-        </a-button>
-      </div>
-    </div>
+          <template v-if="selectedFile">
+            <img :src="previewUrl" :alt="selectedFile.name" class="upload-preview" />
+            <p class="dragger-text">点击或拖拽可更换图片</p>
+          </template>
+          <template v-else>
+            <p class="dragger-icon"><InboxOutlined /></p>
+            <p class="dragger-text">点击或拖拽图片到此处</p>
+            <p class="dragger-hint">支持 jpg / jpeg / gif / png / webp 等图片格式，大小不超过 5MB</p>
+          </template>
+        </a-upload-dragger>
 
-    <a-divider class="upload-divider">或通过 URL 上传</a-divider>
-    <div class="url-row">
-      <a-input
-        v-model:value="imageUrl"
-        placeholder="请输入 http:// 或 https:// 开头的图片链接"
-        :disabled="urlUploading || uploading"
-        allow-clear
-        @press-enter="handleUrlUpload"
-      />
-      <a-button
-        type="primary"
-        :loading="urlUploading"
-        :disabled="!canUrlUpload"
-        @click="handleUrlUpload"
-      >
-        URL 上传
-      </a-button>
-    </div>
+        <div class="upload-footer">
+          <div v-if="selectedFile" class="file-info">
+            <span class="file-name">{{ selectedFile.name }}</span>
+            <span>{{ formatFileSize(selectedFile.size) }}</span>
+          </div>
+          <span v-else class="file-hint">选择图片后可确认上传</span>
+          <div class="file-actions">
+            <a-button
+              type="primary"
+              :loading="uploading"
+              :disabled="!selectedFile"
+              @click="handleConfirm"
+            >
+              确认上传
+            </a-button>
+            <a-button :disabled="!selectedFile || uploading" @click="clearSelection">
+              重新选择
+            </a-button>
+          </div>
+        </div>
+      </a-tab-pane>
+
+      <a-tab-pane key="url" tab="URL 上传">
+        <div class="url-pane">
+          <div class="url-row">
+            <a-input
+              v-model:value="imageUrl"
+              placeholder="请输入 http:// 或 https:// 开头的图片链接"
+              :disabled="urlUploading"
+              allow-clear
+              @press-enter="handleUrlUpload"
+            />
+            <a-button
+              type="primary"
+              :loading="urlUploading"
+              :disabled="!canUrlUpload"
+              @click="handleUrlUpload"
+            >
+              URL 上传
+            </a-button>
+          </div>
+          <p class="url-hint">图片的名称、尺寸、格式等信息将由后端自动解析</p>
+        </div>
+      </a-tab-pane>
+    </a-tabs>
   </a-card>
 </template>
 
@@ -211,10 +220,8 @@ onBeforeUnmount(clearSelection)
   margin-left: auto;
 }
 
-.upload-divider {
-  margin: 20px 0 16px;
-  font-size: 13px;
-  color: #8c8c8c;
+.url-pane {
+  padding: 12px 0 8px;
 }
 
 .url-row {
@@ -224,6 +231,12 @@ onBeforeUnmount(clearSelection)
 
 .url-row :deep(.ant-input-affix-wrapper) {
   flex: 1;
+}
+
+.url-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
 @media (max-width: 600px) {
