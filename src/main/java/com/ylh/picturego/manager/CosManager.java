@@ -1,5 +1,6 @@
 package com.ylh.picturego.manager;
 
+import cn.hutool.core.io.FileUtil;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GetObjectRequest;
@@ -11,6 +12,8 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 通用上传/下载
@@ -59,6 +62,18 @@ public class CosManager {
         // 解析/处理图片
         PicOperations picOperations = new PicOperations();
         picOperations.setIsPicInfo(1); // 1-返回图片信息
+        // 图片处理规则列表
+        List<PicOperations.Rule> rules = new ArrayList<>();
+        // 转换图片格式规则
+        String webpKey = FileUtil.mainName(key) + ".webp";
+        PicOperations.Rule compressRule = new PicOperations.Rule();
+        compressRule.setFileId(webpKey);
+        compressRule.setBucket(cosClientConfig.getBucket());
+        compressRule.setRule("imageMogr2/format/webp");
+        // 添加规则
+        rules.add(compressRule);
+        // 应用规则列表
+        picOperations.setRules(rules);
         // 构造处理参数
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);

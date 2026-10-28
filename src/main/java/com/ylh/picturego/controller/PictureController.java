@@ -2,7 +2,6 @@ package com.ylh.picturego.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.TypeReference;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -13,10 +12,7 @@ import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
-import com.ylh.picturego.manager.cache.CacheTemplate;
-import com.ylh.picturego.manager.cache.LocalCacheOperation;
 import com.ylh.picturego.manager.cache.MultiLevelCache;
-import com.ylh.picturego.manager.cache.RedisCacheOperation;
 import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
@@ -30,14 +26,11 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RestController
@@ -52,12 +45,6 @@ public class PictureController {
 
     @Resource
     private MultiLevelCache multiLevelCache;
-
-    @Resource
-    private StringRedisTemplate stringRedisTemplate;
-
-    @Resource
-    private Cache<String, String> localCache;
 
     /**
      * 上传本地图片
