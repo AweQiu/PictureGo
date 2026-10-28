@@ -8,6 +8,10 @@ export function listPictureVOByPage(data: PictureQueryRequest) {
   return request.post<unknown, Page<PictureVO>>('/picture/list/page/vo', data)
 }
 
+export function listPictureVOByPageWithCache(data: PictureQueryRequest) {
+  return request.post<unknown, Page<PictureVO>>('/picture/list/page/vo/cache', data)
+}
+
 export function getPictureById(id: number | string) {
   return request.get<unknown, Picture>('/picture/get', { params: { id } })
 }

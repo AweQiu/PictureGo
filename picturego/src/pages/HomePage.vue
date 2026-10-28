@@ -3,7 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { SearchOutlined } from '@ant-design/icons-vue'
-import { listPictureTagCategory, listPictureVOByPage } from '../api/picture'
+import { listPictureTagCategory, listPictureVOByPageWithCache } from '../api/picture'
 
 const router = useRouter()
 
@@ -39,7 +39,7 @@ async function fetchTagCategory() {
 async function fetchData() {
   loading.value = true
   try {
-    const page = await listPictureVOByPage({
+    const page = await listPictureVOByPageWithCache({
       current: pagination.current,
       pageSize: pagination.pageSize,
       searchText: queryForm.searchText.trim() || undefined,
@@ -203,7 +203,7 @@ onMounted(() => {
             @keydown.enter="openDetail(picture)"
           >
             <div class="gallery-cover">
-              <img :src="picture.thumbnailUrl ?? picture.url" :alt="picture.name" loading="lazy" />
+              <img :src="picture.thumbnailUrl || picture.url" :alt="picture.name" loading="lazy" />
               <div class="gallery-overlay">
                 <span class="gallery-name" :title="picture.name">{{ picture.name }}</span>
                 <div v-if="picture.tags?.length" class="gallery-tags">

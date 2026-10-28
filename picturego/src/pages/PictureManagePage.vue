@@ -398,7 +398,12 @@ async function handleDelete(record: Picture) {
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'url'">
-          <a-image :src="record.url" :width="72" :height="50" style="object-fit: cover" />
+          <img
+            :src="record.thumbnailUrl || record.url"
+            :alt="record.name"
+            loading="lazy"
+            style="width: 72px; height: 50px; object-fit: cover; border-radius: 4px"
+          />
         </template>
         <template v-else-if="column.key === 'category'">
           <span>{{ record.category || '—' }}</span>

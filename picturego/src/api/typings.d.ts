@@ -100,6 +100,7 @@ interface DeleteRequest {
 interface Picture {
   id: string
   url: string
+  thumbnailUrl: string
   name: string
   introduction: string
   category: string
