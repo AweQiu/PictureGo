@@ -6,10 +6,6 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpStatus;
-import cn.hutool.http.HttpUtil;
-import cn.hutool.http.Method;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
@@ -17,17 +13,12 @@ import com.qcloud.cos.model.ciModel.persistence.ProcessResults;
 import com.ylh.picturego.config.CosClientConfig;
 import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
-import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.CosManager;
-import com.ylh.picturego.model.dto.file.UploadResult;
+import com.ylh.picturego.model.dto.file.UploadPictureResult;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -53,41 +44,7 @@ public abstract class PictureUploadTemplate {
      * @param uploadPathPrefix 上传路径前缀
      * @return 上传结果
      */
-//    public UploadResult uploadPicture(Object inputSource, String uploadPathPrefix) {
-//        // 校验图片
-//        validPicture(inputSource);
-//        // 自定义上传的文件名，避免冲突增加安全性
-//        String uuid = RandomUtil.randomString(16);
-//        String originalFilename = getOriginalFilename(inputSource);
-//        // 解析结果
-//        File tempFile = null;
-//        try {
-//            // 创建临时文件，先把文件落盘（下载/转存），以便后续按真实内容判断后缀
-//            tempFile = File.createTempFile("temp_" + uuid, null);
-//            processFile(inputSource, tempFile);
-//            // 后缀：优先按文件名/URL 解析，取不到则按下载文件真实类型(魔数)兜底
-//            String suffix = resolveSuffix(originalFilename, tempFile);
-//            String uploadFilename = String.format("%s_%s.%s",
-//                    DateUtil.formatDate(new Date()),
-//                    uuid,
-//                    suffix
-//            );
-//            String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
-//            // 上传图片到对象存储
-//            PutObjectResult putObjectResult = cosManager.uploadPicture(uploadPath, tempFile);
-//            // 获取图片信息，封装上传结果
-//            ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
-//            return buildResult(imageInfo, uploadPath, originalFilename, tempFile);
-//        } catch (Exception e) {
-//            log.error("图片上传到对象存储失败", e);
-//            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
-//        }finally {
-//            // 清理临时文件
-//            deleteTempFile(tempFile);
-//        }
-//    }
-
-    public UploadResult uploadPicture(Object inputSource, String uploadPathPrefix) {
+    public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix) {
         // 校验图片
         validPicture(inputSource);
         // 解析结果
@@ -118,7 +75,12 @@ public abstract class PictureUploadTemplate {
             if (CollUtil.isNotEmpty(objectList)) {
                 // 获取压缩后的图片信息
                 CIObject compressedObject = objectList.getFirst();
-                return buildResult(originalFilename, compressedObject);
+                CIObject thumbnailCiObject = compressedObject; // 缩略图默认使用压缩后的图片信息
+                // 缩略图存在，才获取缩略图信息
+                if (objectList.size() > 1) {
+                    thumbnailCiObject = objectList.get(1);
+                }
+                return buildResult(originalFilename, compressedObject, thumbnailCiObject);
             }
             return buildResult(imageInfo, uploadPath, originalFilename, tempFile);
         } catch (Exception e) {
@@ -136,12 +98,13 @@ public abstract class PictureUploadTemplate {
      * @param compressedObject 压缩后的图片信息
      * @return 上传结果
      */
-    private UploadResult buildResult(String originalFilename, CIObject compressedObject) {
+    private UploadPictureResult buildResult(String originalFilename, CIObject compressedObject, CIObject thumbnailCiObject) {
         // 封装返回结果
         double picScale = NumberUtil.round(compressedObject.getWidth() * 1.0 / compressedObject.getHeight(), 2).doubleValue();
         // 返回上传结果
-        return UploadResult.builder()
-                .url(cosClientConfig.getHost() + "/" + compressedObject.getKey())
+        return UploadPictureResult.builder()
+                .url(cosClientConfig.getHost() + "/" + compressedObject.getKey()) // 压缩后的图片URL
+                .thumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey()) // 缩略图URL
                 .name(FileUtil.mainName(originalFilename))
                 .picSize(compressedObject.getSize().longValue())
                 .picWidth(compressedObject.getWidth())
@@ -159,11 +122,11 @@ public abstract class PictureUploadTemplate {
      * @param tempFile 临时文件
      * @return 上传结果
      */
-    private UploadResult buildResult(ImageInfo imageInfo, String uploadPath, String originalFilename, File tempFile) {
+    private UploadPictureResult buildResult(ImageInfo imageInfo, String uploadPath, String originalFilename, File tempFile) {
         // 封装返回结果
         double picScale = NumberUtil.round(imageInfo.getWidth() * 1.0 / imageInfo.getHeight(), 2).doubleValue();
         // 返回上传结果
-        return UploadResult.builder()
+        return UploadPictureResult.builder()
                 .url(cosClientConfig.getHost() + uploadPath)
                 .name(FileUtil.mainName(originalFilename))
                 .picSize(FileUtil.size(tempFile))

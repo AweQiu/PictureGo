@@ -124,6 +124,7 @@ interface Picture {
 interface PictureVO {
   id: string
   url: string
+  thumbnailUrl: string
   name: string
   introduction: string
   category: string

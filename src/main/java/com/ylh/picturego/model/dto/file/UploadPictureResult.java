@@ -5,12 +5,17 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UploadResult {
+public class UploadPictureResult {
 
     /**
      * 图片url
      */
     private String url;
+
+    /**
+     * 缩略图url
+     */
+    private String thumbnailUrl;
 
     /**
      * 图片名称

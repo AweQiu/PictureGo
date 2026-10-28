@@ -13,7 +13,7 @@ import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.upload.FilePictureUpload;
 import com.ylh.picturego.manager.upload.PictureUploadTemplate;
 import com.ylh.picturego.manager.upload.UrlPictureUpload;
-import com.ylh.picturego.model.dto.file.UploadResult;
+import com.ylh.picturego.model.dto.file.UploadPictureResult;
 import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
 import com.ylh.picturego.model.dto.picture.PictureReviewRequest;
 import com.ylh.picturego.model.dto.picture.PictureUploadByBatchRequest;
@@ -104,19 +104,20 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         if (inputSource instanceof String) {
             pictureUploadTemplate = urlPictureUpload;
         }
-        UploadResult uploadResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         // 构造图片信息
         Picture newPicture = Picture.builder()
-                .url(uploadResult.getUrl())
-                .name(uploadResult.getName())
-                .picSize(uploadResult.getPicSize())
-                .picWidth(uploadResult.getPicWidth())
-                .picHeight(uploadResult.getPicHeight())
-                .picScale(uploadResult.getPicScale())
-                .picFormat(uploadResult.getPicFormat())
+                .url(uploadPictureResult.getUrl())
+                .thumbnailUrl(uploadPictureResult.getThumbnailUrl())
+                .name(uploadPictureResult.getName())
+                .picSize(uploadPictureResult.getPicSize())
+                .picWidth(uploadPictureResult.getPicWidth())
+                .picHeight(uploadPictureResult.getPicHeight())
+                .picScale(uploadPictureResult.getPicScale())
+                .picFormat(uploadPictureResult.getPicFormat())
                 .userId(loginUser.getId())
                 .build();
-        // 逐字段填充扩展参数：外层传了才覆盖，未传则保留上传解析值
+        // 逐字段填充扩展参数,外层传了才覆盖，未传则保留上传解析值
         if (pictureUploadRequest != null) {
             if (StrUtil.isNotBlank(pictureUploadRequest.getName())) {
                 newPicture.setName(pictureUploadRequest.getName());

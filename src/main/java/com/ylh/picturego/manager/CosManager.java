@@ -64,14 +64,22 @@ public class CosManager {
         picOperations.setIsPicInfo(1); // 1-返回图片信息
         // 图片处理规则列表
         List<PicOperations.Rule> rules = new ArrayList<>();
-        // 转换图片格式规则
+        // 转换图片格式
         String webpKey = FileUtil.mainName(key) + ".webp";
         PicOperations.Rule compressRule = new PicOperations.Rule();
         compressRule.setFileId(webpKey);
         compressRule.setBucket(cosClientConfig.getBucket());
         compressRule.setRule("imageMogr2/format/webp");
-        // 添加规则
         rules.add(compressRule);
+        // 缩略图处理，只对大于20K的图片处理
+        if (file.length() > 20 * 1024) {
+            PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+            String thumbnailKey = FileUtil.mainName(key) + "_thumbnail." + FileUtil.extName(key);
+            thumbnailRule.setFileId(thumbnailKey);
+            thumbnailRule.setBucket(cosClientConfig.getBucket());
+            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s", 256, 256)); // 设定尺寸大于原图尺寸时，不作处理
+            rules.add(thumbnailRule);
+        }
         // 应用规则列表
         picOperations.setRules(rules);
         // 构造处理参数

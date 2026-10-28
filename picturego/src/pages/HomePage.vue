@@ -203,7 +203,7 @@ onMounted(() => {
             @keydown.enter="openDetail(picture)"
           >
             <div class="gallery-cover">
-              <img :src="picture.url" :alt="picture.name" loading="lazy" />
+              <img :src="picture.thumbnailUrl ?? picture.url" :alt="picture.name" loading="lazy" />
               <div class="gallery-overlay">
                 <span class="gallery-name" :title="picture.name">{{ picture.name }}</span>
                 <div v-if="picture.tags?.length" class="gallery-tags">
