@@ -90,22 +90,24 @@ public abstract class PictureUploadTemplate {
     public UploadResult uploadPicture(Object inputSource, String uploadPathPrefix) {
         // 校验图片
         validPicture(inputSource);
-        // 自定义上传的文件名，避免冲突增加安全性
-        String uuid = RandomUtil.randomString(16);
-        String originalFilename = getOriginalFilename(inputSource);
-        String suffix = FileUtil.getSuffix(originalFilename);
-        String uploadFilename = String.format("%s_%s.%s",
-                DateUtil.formatDate(new Date()),
-                uuid,
-                suffix
-        );
-        String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
         // 解析结果
         File tempFile = null;
         try {
+            // 自定义上传的文件名，避免冲突增加安全性
+            String uuid = RandomUtil.randomString(16);
+            String originalFilename = getOriginalFilename(inputSource);
+
             // 创建临时文件，先把文件落盘（下载/转存），以便后续按真实内容判断后缀
-            tempFile = File.createTempFile(uploadPath, null);
+            tempFile = File.createTempFile("temp_" + uuid, null);
             processFile(inputSource, tempFile);
+
+            String suffix = resolveSuffix(originalFilename, tempFile);
+            String uploadFilename = String.format("%s_%s.%s",
+                    DateUtil.formatDate(new Date()),
+                    uuid,
+                    suffix
+            );
+            String uploadPath = String.format("%s/%s", uploadPathPrefix, uploadFilename);
             // 上传图片到对象存储
             PutObjectResult putObjectResult = cosManager.uploadPicture(uploadPath, tempFile);
             // 获取图片信息，封装上传结果
@@ -139,7 +141,7 @@ public abstract class PictureUploadTemplate {
         double picScale = NumberUtil.round(compressedObject.getWidth() * 1.0 / compressedObject.getHeight(), 2).doubleValue();
         // 返回上传结果
         return UploadResult.builder()
-                .url(cosClientConfig.getHost() + compressedObject.getKey())
+                .url(cosClientConfig.getHost() + "/" + compressedObject.getKey())
                 .name(FileUtil.mainName(originalFilename))
                 .picSize(compressedObject.getSize().longValue())
                 .picWidth(compressedObject.getWidth())
