@@ -1,8 +1,11 @@
 package com.ylh.picturego.controller;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.TypeReference;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.ylh.picturego.annotation.AuthCheck;
 import com.ylh.picturego.common.DeleteRequest;
 import com.ylh.picturego.common.Result;
@@ -10,6 +13,10 @@ import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
+import com.ylh.picturego.manager.cache.CacheTemplate;
+import com.ylh.picturego.manager.cache.LocalCacheOperation;
+import com.ylh.picturego.manager.cache.MultiLevelCache;
+import com.ylh.picturego.manager.cache.RedisCacheOperation;
 import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
@@ -22,11 +29,15 @@ import com.ylh.picturego.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RestController
@@ -38,6 +49,15 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+    @Resource
+    private MultiLevelCache multiLevelCache;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private Cache<String, String> localCache;
 
     /**
      * 上传本地图片
@@ -237,6 +257,7 @@ public class PictureController {
         );
         return ResultUtils.success(picturePage);
     }
+
     /**
      * 分页获取图片封装类列表
      * @param pictureQueryRequest 图片查询请求
@@ -257,6 +278,44 @@ public class PictureController {
         );
         // 获取封装类
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
+    }
+
+    /**
+     * 分页获取图片封装类列表（缓存版）
+     * @param pictureQueryRequest 图片查询请求
+     * @return 图片封装类列表
+     */
+    @PostMapping("/list/page/vo/cache")
+    public Result<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        long current = pictureQueryRequest.getCurrent();
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
+        // 只允许查询通过审核的图片
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getCode());
+        // 查询二级缓存
+        Page<PictureVO> cachedPictureVOPage = multiLevelCache.getCacheValue(
+                "picturego:listPictureVOByPage",
+                pictureQueryRequest,
+                new TypeReference<Page<PictureVO>>() {}
+        );
+        // 如果缓存不为空，则返回缓存数据
+        if (cachedPictureVOPage != null) {
+            return ResultUtils.success(cachedPictureVOPage);
+        }
+        // 查询数据库
+        Page<Picture> picturePage = pictureService.page(
+                new Page<>(current, size),
+                pictureService.getQueryWrapper(pictureQueryRequest)
+        );
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 将查询结果写入缓存
+        multiLevelCache.putCacheValue(
+                "picturego:listPictureVOByPage",
+                pictureQueryRequest,
+                pictureVOPage
+        );
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**

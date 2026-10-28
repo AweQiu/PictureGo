@@ -7,14 +7,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/health")
 public class HealthController {
     /**
      * 健康检查
      * @return
      */
-    @GetMapping("/health")
-    public Result<String> healthCheck() {
-        return ResultUtils.success("healthy");
+    @GetMapping("/alive")
+    public Result<String> isAlive() {
+        return ResultUtils.success("hello");
     }
 }
