@@ -66,7 +66,7 @@ public abstract class PictureUploadTemplate {
             );
             String uploadPath = String.format("%s/%s", uploadPathPrefix, uploadFilename);
             // 上传图片到对象存储
-            PutObjectResult putObjectResult = cosManager.uploadPicture(uploadPath, tempFile);
+            PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, tempFile);
             // 获取图片信息，封装上传结果
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             // 获取图片处理结果

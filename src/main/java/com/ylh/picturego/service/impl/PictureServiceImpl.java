@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
+import com.ylh.picturego.manager.CosManager;
 import com.ylh.picturego.manager.upload.FilePictureUpload;
 import com.ylh.picturego.manager.upload.PictureUploadTemplate;
 import com.ylh.picturego.manager.upload.UrlPictureUpload;
@@ -33,6 +34,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -59,6 +61,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private UrlPictureUpload urlPictureUpload;
+
+    @Resource
+    private CosManager cosManager;
 
     @Override
     public void validPicture(Picture picture) {
@@ -95,6 +100,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
                     !userService.isAdmin(loginUser),
                     ErrorCode.NO_AUTH_ERROR, "无权限修改图片"
             );
+            // 删除旧图片
+            clearPictureFile(oldPicture);
         }
         // 上传图片，按照用户id划分目录
         String uploadPathPrefix = String.format("/public/%s", loginUser.getId());
@@ -351,6 +358,26 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             if (uploadedCount >= count) break;
         }
         return uploadedCount;
+    }
+
+    @Async
+    @Override
+    public void clearPictureFile(Picture oldPicture) {
+        // 判断图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        long count = lambdaQuery()
+                .eq(Picture::getUrl, pictureUrl)
+                .count();
+        if (count > 1) {
+            return; // 图片被多条记录使用，不删除
+        }
+        // 删除对象存储中的图片
+        cosManager.deleteObject(pictureUrl);
+        // 删除对象存储中的缩略图
+        String thumbnailUrl = oldPicture.getThumbnailUrl();
+        if (StrUtil.isNotBlank(thumbnailUrl)) {
+            cosManager.deleteObject(thumbnailUrl);
+        }
     }
 }
 

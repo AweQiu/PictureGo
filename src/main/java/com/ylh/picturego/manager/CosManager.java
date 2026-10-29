@@ -56,7 +56,7 @@ public class CosManager {
      * @param file 文件
      * @return 上传结果
      */
-    public PutObjectResult uploadPicture(String key, File file) {
+    public PutObjectResult putPictureObject(String key, File file) {
         // 指定上传桶、对象键和文件
         PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key, file);
         // 解析/处理图片
@@ -85,5 +85,14 @@ public class CosManager {
         // 构造处理参数
         putObjectRequest.setPicOperations(picOperations);
         return cosClient.putObject(putObjectRequest);
+    }
+
+    /**
+     * 删除对象
+     *
+     * @param key 对象键
+     */
+    public void deleteObject(String key) {
+        cosClient.deleteObject(cosClientConfig.getBucket(), key);
     }
 }
