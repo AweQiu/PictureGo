@@ -12,20 +12,20 @@ public enum PictureReviewStatusEnum {
     PASS(1, "审核通过"),
     REJECT(2, "审核拒绝");
 
-    private final int code;
-    private final String message;
+    private final int value;
+    private final String text;
 
-    PictureReviewStatusEnum(int code, String message) {
-        this.code = code;
-        this.message = message;
+    PictureReviewStatusEnum(int value, String text) {
+        this.value = value;
+        this.text = text;
     }
 
-    public static PictureReviewStatusEnum getEnumByCode(int code) {
-        if (ObjUtil.isEmpty(code)) {
+    public static PictureReviewStatusEnum getEnumByValue(int value) {
+        if (ObjUtil.isEmpty(value)) {
             return null;
         }
         for (PictureReviewStatusEnum pictureReviewStatusEnum : PictureReviewStatusEnum.values()) {
-            if (pictureReviewStatusEnum.getCode() == code) {
+            if (pictureReviewStatusEnum.getValue() == value) {
                 return pictureReviewStatusEnum;
             }
         }

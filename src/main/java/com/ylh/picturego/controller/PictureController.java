@@ -221,7 +221,7 @@ public class PictureController {
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
         // 只返回审核通过的图片
-        ThrowUtils.throwException(picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getCode(), ErrorCode.OPERATION_ERROR, "图片审核未通过");
+        ThrowUtils.throwException(picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getValue(), ErrorCode.OPERATION_ERROR, "图片审核未通过");
         // 获取图片VO
         PictureVO pictureVO = pictureService.getPictureVO(picture, request);
         return ResultUtils.success(pictureVO);
@@ -257,7 +257,7 @@ public class PictureController {
         // 限制爬虫
         ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
         // 只允许查询通过审核的图片
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getCode());
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(
                 new Page<>(current, size),
@@ -279,7 +279,7 @@ public class PictureController {
         // 限制爬虫
         ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
         // 只允许查询通过审核的图片
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getCode());
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // 查询二级缓存
         Page<PictureVO> cachedPictureVOPage = multiLevelCache.getCacheValue(
                 "picturego:listPictureVOByPage",

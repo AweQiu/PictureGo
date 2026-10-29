@@ -257,7 +257,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 校验参数
         ThrowUtils.throwException(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR, "审核图片参数为空");
         Long id = pictureReviewRequest.getId();
-        PictureReviewStatusEnum reviewStatus = PictureReviewStatusEnum.getEnumByCode(pictureReviewRequest.getReviewStatus());
+        PictureReviewStatusEnum reviewStatus = PictureReviewStatusEnum.getEnumByValue(pictureReviewRequest.getReviewStatus());
         String reviewMessage = pictureReviewRequest.getReviewMessage();
         ThrowUtils.throwException(
                 id == null ||
@@ -269,7 +269,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
         // 校验审核状态是否重复
         ThrowUtils.throwException(
-                oldPicture.getReviewStatus().equals(reviewStatus.getCode()),
+                oldPicture.getReviewStatus().equals(reviewStatus.getValue()),
                 ErrorCode.PARAMS_ERROR, "审核状态未改变");
         // 审核通过且未填写意见时，默认填充“审核通过”
         if (reviewStatus == PictureReviewStatusEnum.PASS && StrUtil.isBlank(reviewMessage)) {
@@ -278,7 +278,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         // 数据库操作
         Picture newPicture = Picture.builder()
                 .id(id)
-                .reviewStatus(reviewStatus.getCode())
+                .reviewStatus(reviewStatus.getValue())
                 .reviewMessage(reviewMessage)
                 .reviewTime(new Date())
                 .reviewerId(loginUser.getId())
@@ -296,13 +296,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     public void fillReviewParams(Picture picture, User loginUser) {
         if (userService.isAdmin(loginUser)) {
             // 管理员自动过审
-            picture.setReviewStatus(PictureReviewStatusEnum.PASS.getCode());
+            picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
             picture.setReviewMessage("管理员自动过审");
             picture.setReviewerId(loginUser.getId());
             picture.setReviewTime(new Date());
         }else {
             // 普通用户待审核
-            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getCode());
+            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
         }
     }
 
