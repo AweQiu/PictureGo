@@ -1,0 +1,54 @@
+package com.ylh.picturego.model.enums;
+
+import cn.hutool.core.util.ObjUtil;
+import lombok.Getter;
+
+/**
+ * 空间级别枚举
+ */
+@Getter
+public enum SpaceLevelEnum {
+
+    COMMON("普通空间", 0, 100L * 1024 * 1024, 100L),
+    PROFESSIONAL("专业空间", 1, 1000L * 1024 * 1024 * 10, 1000L),
+    FLAGSHIP("旗舰空间", 2, 10000L * 1024 * 1024 * 100, 10000L);
+
+    private final String text;
+
+    private final int value;
+
+    private final long maxSize;
+
+    private final long maxCount;
+
+    /**
+     * 枚举构造函数
+     * @param text 枚举文本
+     * @param value 枚举值
+     * @param maxSize 最大存储空间
+     * @param maxCount 最大图片数量
+     */
+    SpaceLevelEnum(String text, int value, long maxSize, long maxCount) {
+        this.text = text;
+        this.value = value;
+        this.maxSize = maxSize;
+        this.maxCount = maxCount;
+    }
+
+    /**
+     * 根据值获取枚举
+     * @param value 枚举值
+     * @return 枚举
+     */
+    public static SpaceLevelEnum getEnumByValue(Integer value) {
+        if (ObjUtil.isEmpty(value)) {
+            return null;
+        }
+        for (SpaceLevelEnum spaceLevelEnum : SpaceLevelEnum.values()) {
+            if (spaceLevelEnum.getValue() == value) {
+                return spaceLevelEnum;
+            }
+        }
+        return null;
+    }
+}
