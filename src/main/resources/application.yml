@@ -3,11 +3,29 @@ spring:
     name: PictureGo
   profiles:
     active: dev
+  servlet:
+    multipart:
+      max-file-size: 10MB
+  # Redis配置
+  data:
+    redis:
+      database: 0
+      host: localhost
+      port: 6379
+      timeout: 5000
+  # Session 配置
+  session:
+    timeout: 30d # 30天过期
+    redis:
+      namespace: "picturego:session"
 
 server:
   port: 8080
   servlet:
     context-path: /picgo
+    session:
+      cookie:
+        max-age: 30d # 30天过期
 
 mybatis-plus:
   configuration:

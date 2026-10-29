@@ -13,7 +13,7 @@ const total = ref(0)
 
 const pagination = reactive({
   current: 1,
-  pageSize: 12,
+  pageSize: 15,
 })
 const customPageSize = ref<number>(pagination.pageSize)
 
