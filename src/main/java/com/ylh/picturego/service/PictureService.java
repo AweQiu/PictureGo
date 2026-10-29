@@ -11,7 +11,6 @@ import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.PictureVO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.multipart.MultipartFile;
 
 /**
 * @author V0411
