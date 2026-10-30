@@ -117,8 +117,8 @@ public class PictureController {
         // 权限校验，非本人则权限不得低于管理员
         ThrowUtils.throwException(
                 !oldPicture.getUserId().equals(loginUser.getId()) &&
-                UserRoleEnum.getEnumByValue(loginUser.getUserRole()).getLevel() < UserRoleEnum.ADMIN.getLevel(),
-                ErrorCode.OPERATION_ERROR, "无权限删除"
+                !userService.isAdmin(loginUser),
+                ErrorCode.NO_AUTH_ERROR, "无权限删除"
         );
         // 删除图片
         boolean result = pictureService.removeById(id);
@@ -183,8 +183,8 @@ public class PictureController {
         // 权限校验，非本人则权限不得低于管理员
         ThrowUtils.throwException(
                 !oldPicture.getUserId().equals(loginUser.getId()) &&
-                UserRoleEnum.getEnumByValue(loginUser.getUserRole()).getLevel() < UserRoleEnum.ADMIN.getLevel(),
-                ErrorCode.OPERATION_ERROR, "无权限编辑"
+                !userService.isAdmin(loginUser),
+                ErrorCode.NO_AUTH_ERROR, "无权限编辑"
         );
         // 补充审核参数
         pictureService.fillReviewParams(picture, loginUser);

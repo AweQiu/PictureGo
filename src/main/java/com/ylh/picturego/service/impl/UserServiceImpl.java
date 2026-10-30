@@ -2,6 +2,7 @@ package com.ylh.picturego.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -47,6 +48,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String encryptedPassword = EncryptUtil.getEncryptPassword(userRegisterRequest.getUserPassword(), "PasswordSalt");
         // 保存用户
         User newUser = User.builder()
+                .userName(UserConstant.DEFAULT_USER_NAME + "-" + RandomUtil.randomString(10))
+                .userRole(UserConstant.DEFAULT_ROLE)
                 .userAccount(userRegisterRequest.getUserAccount())
                 .userPassword(encryptedPassword)
                 .build();

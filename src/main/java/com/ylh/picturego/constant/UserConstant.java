@@ -28,7 +28,7 @@ public interface UserConstant {
     /**
      * 默认用户名
      */
-    String DEFAULT_USER_NAME = "user";
+    String DEFAULT_USER_NAME = "用户";
 
     /**
      * 默认用户密码

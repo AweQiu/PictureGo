@@ -171,7 +171,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         if (CollUtil.isEmpty(pictureList)) {
             return pictureVOPage;
         }
-        // 对象列表转封装对象列表，此时PictureVO对象中只包含用户id，不包含UserVO对象
+        // 对象列表转封装对象列表，此时PictureVO对象中不包含UserVO对象
         List<PictureVO> pictureVOList = pictureList.stream().map(PictureVO::objToVo).collect(Collectors.toList());
         // 关联查询用户信息
         Set<Long> userIdSet = pictureList.stream().map(Picture::getUserId).collect(Collectors.toSet());

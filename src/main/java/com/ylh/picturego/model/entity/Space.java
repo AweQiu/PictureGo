@@ -37,7 +37,7 @@ public class Space implements Serializable {
     /**
      * 空间图片最大数量
      */
-    private Integer maxCount;
+    private Long maxCount;
 
     /**
      * 当前空间图片占用空间
@@ -47,7 +47,7 @@ public class Space implements Serializable {
     /**
      * 当前空间图片数量
      */
-    private Integer totalCount;
+    private Long totalCount;
 
     /**
      * 创建用户id

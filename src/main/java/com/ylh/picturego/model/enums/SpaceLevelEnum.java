@@ -1,6 +1,7 @@
 package com.ylh.picturego.model.enums;
 
 import cn.hutool.core.util.ObjUtil;
+import com.ylh.picturego.constant.SpaceConstant;
 import lombok.Getter;
 
 /**
@@ -9,9 +10,9 @@ import lombok.Getter;
 @Getter
 public enum SpaceLevelEnum {
 
-    COMMON("普通空间", 0, 100L * 1024 * 1024, 100L),
-    PROFESSIONAL("专业空间", 1, 1000L * 1024 * 1024 * 10, 1000L),
-    FLAGSHIP("旗舰空间", 2, 10000L * 1024 * 1024 * 100, 10000L);
+    COMMON("普通空间", 0, SpaceConstant.SPACE_SIZE_COMMON, SpaceConstant.SPACE_COUNT_COMMON),
+    PROFESSIONAL("专业空间", 1, SpaceConstant.SPACE_SIZE_PROFESSIONAL, SpaceConstant.SPACE_COUNT_PROFESSIONAL),
+    FLAGSHIP("旗舰空间", 2, SpaceConstant.SPACE_SIZE_FLAGSHIP, SpaceConstant.SPACE_COUNT_FLAGSHIP);
 
     private final String text;
 

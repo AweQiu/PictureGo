@@ -33,7 +33,7 @@ public class SpaceUpdateRequest implements Serializable {
     /**
      * 空间最大图片数量
      */
-    private Integer maxCount;
+    private Long maxCount;
 
     private static final long serialVersionUID = 1L;
 }
