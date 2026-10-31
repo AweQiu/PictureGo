@@ -11,7 +11,7 @@
  Target Server Version : 80027
  File Encoding         : 65001
 
- Date: 25/10/2026 05:46:38
+ Date: 01/11/2026 05:22:59
 */
 
 SET NAMES utf8mb4;
@@ -24,6 +24,7 @@ DROP TABLE IF EXISTS `picture`;
 CREATE TABLE `picture`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '唯一标识',
   `url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '图片url',
+  `thumbnailUrl` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '缩略图URL',
   `name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '图片名称',
   `introduction` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '图片介绍',
   `category` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '分类',
@@ -38,6 +39,7 @@ CREATE TABLE `picture`  (
   `picScale` double NULL DEFAULT NULL COMMENT '宽高比例',
   `picFormat` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '图片格式',
   `userId` bigint NOT NULL COMMENT '创建用户id',
+  `spaceId` bigint NULL DEFAULT NULL COMMENT '空间id（为空表示公共空间）',
   `createTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `editTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
   `updateTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -47,8 +49,32 @@ CREATE TABLE `picture`  (
   INDEX `idx_introduction`(`introduction` ASC) USING BTREE COMMENT '基于介绍查询',
   INDEX `idx_name`(`name` ASC) USING BTREE COMMENT '基于名称查询',
   INDEX `idx_tags`(`tags` ASC) USING BTREE COMMENT '基于标签查询',
-  INDEX `idx_userId`(`userId` ASC) USING BTREE COMMENT '基于用户id查询'
-) ENGINE = InnoDB AUTO_INCREMENT = 2114109538473996291 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '图片表' ROW_FORMAT = Dynamic;
+  INDEX `idx_userId`(`userId` ASC) USING BTREE COMMENT '基于用户id查询',
+  INDEX `idx_spaceId`(`spaceId` ASC) USING BTREE COMMENT '基于空间id查询'
+) ENGINE = InnoDB AUTO_INCREMENT = 2115589320751448066 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '图片表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for space
+-- ----------------------------
+DROP TABLE IF EXISTS `space`;
+CREATE TABLE `space`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '唯一标识',
+  `spaceName` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '空间名称',
+  `spaceLevel` int NULL DEFAULT 0 COMMENT '空间级别：0-普通，1-专业版，2-旗舰版',
+  `maxSize` bigint NULL DEFAULT 0 COMMENT '空间图片最大占用空间',
+  `maxCount` bigint NULL DEFAULT 0 COMMENT '空间图片最大数量',
+  `totalSize` bigint NULL DEFAULT 0 COMMENT '当前空间图片占用空间',
+  `totalCount` bigint NULL DEFAULT 0 COMMENT '当前空间图片数量',
+  `userId` bigint NOT NULL COMMENT '创建用户id',
+  `createTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `editTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
+  `updateTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `isDelete` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_spaceLevel`(`spaceLevel` ASC) USING BTREE COMMENT '提升基于空间级别查询的效率',
+  INDEX `idx_spaceName`(`spaceName` ASC) USING BTREE COMMENT '提升基于空间名称的查询效率',
+  INDEX `idx_userId`(`userId` ASC) USING BTREE COMMENT '提升基于用户的查询效率'
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '空间表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for user

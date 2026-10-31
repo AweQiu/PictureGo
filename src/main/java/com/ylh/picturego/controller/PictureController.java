@@ -14,12 +14,13 @@ import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.cache.MultiLevelCache;
 import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
+import com.ylh.picturego.model.entity.Space;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
-import com.ylh.picturego.model.enums.UserRoleEnum;
 import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.service.PictureService;
+import com.ylh.picturego.service.SpaceService;
 import com.ylh.picturego.service.UserService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,9 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+    @Resource
+    private SpaceService spaceService;
 
     @Resource
     private MultiLevelCache multiLevelCache;
@@ -109,22 +113,9 @@ public class PictureController {
             HttpServletRequest request
     ) {
         ThrowUtils.throwException(deleteRequest == null || deleteRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
-        Long id = deleteRequest.getId();
+        Long pictureId = deleteRequest.getId();
         User loginUser = userService.getLoginUser(request);
-        Picture oldPicture = pictureService.getById(id);
-        // 存在性校验
-        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-        // 权限校验，非本人则权限不得低于管理员
-        ThrowUtils.throwException(
-                !oldPicture.getUserId().equals(loginUser.getId()) &&
-                !userService.isAdmin(loginUser),
-                ErrorCode.NO_AUTH_ERROR, "无权限删除"
-        );
-        // 删除图片
-        boolean result = pictureService.removeById(id);
-        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片删除失败");
-        // 清理图片文件
-        pictureService.clearPictureFile(oldPicture);
+        pictureService.deletePicture(pictureId, loginUser);
         return ResultUtils.success(true);
     }
 
@@ -168,29 +159,8 @@ public class PictureController {
     @PostMapping("/edit")
     public Result<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
         ThrowUtils.throwException(pictureEditRequest == null || pictureEditRequest.getId() <= 0, ErrorCode.PARAMS_ERROR);
-        // DTO类转实体类
-        Picture picture = new Picture();
-        BeanUtil.copyProperties(pictureEditRequest, picture);
-        // List列表转String
-        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
-        // 校验图片
-        pictureService.validPicture(picture);
         User loginUser = userService.getLoginUser(request);
-        // 存在性校验
-        long id = pictureEditRequest.getId();
-        Picture oldPicture = pictureService.getById(id);
-        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-        // 权限校验，非本人则权限不得低于管理员
-        ThrowUtils.throwException(
-                !oldPicture.getUserId().equals(loginUser.getId()) &&
-                !userService.isAdmin(loginUser),
-                ErrorCode.NO_AUTH_ERROR, "无权限编辑"
-        );
-        // 补充审核参数
-        pictureService.fillReviewParams(picture, loginUser);
-        // 操作数据库
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwException(!result, ErrorCode.OPERATION_ERROR, "图片编辑失败");
+        pictureService.editPicture(pictureEditRequest, loginUser);
         return ResultUtils.success(true);
     }
 
@@ -220,6 +190,14 @@ public class PictureController {
         // 查询数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 空间权限校验
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null) {
+            // 私有空间图片
+            User loginUser = userService.getLoginUser(request);
+            pictureService.checkPictureAuth(picture, loginUser);
+
+        }
         // 只返回审核通过的图片
         ThrowUtils.throwException(picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getValue(), ErrorCode.OPERATION_ERROR, "图片审核未通过");
         // 获取图片VO
@@ -246,7 +224,7 @@ public class PictureController {
     }
 
     /**
-     * 分页获取图片封装类列表
+     * 分页获取图片封装类列表（普通版，用于私有空间）
      * @param pictureQueryRequest 图片查询请求
      * @return 图片封装类列表
      */
@@ -256,19 +234,32 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
-        // 只允许查询通过审核的图片
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // 空间权限校验
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId == null) {
+            // 公共图库
+            // 只允许查询通过审核的图片
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setIsPublic(true);
+        }else {
+            // 私有空间
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwException(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            ThrowUtils.throwException(!loginUser.getId().equals(space.getUserId()), ErrorCode.NO_AUTH_ERROR, "无空间权限");
+        }
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(
                 new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest)
         );
+
         // 获取封装类
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 
     /**
-     * 分页获取图片封装类列表（缓存版）
+     * 分页获取图片封装类列表（缓存版，用于公共图库）
      * @param pictureQueryRequest 图片查询请求
      * @return 图片封装类列表
      */

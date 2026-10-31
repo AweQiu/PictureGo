@@ -3,10 +3,7 @@ package com.ylh.picturego.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
-import com.ylh.picturego.model.dto.picture.PictureReviewRequest;
-import com.ylh.picturego.model.dto.picture.PictureUploadByBatchRequest;
-import com.ylh.picturego.model.dto.picture.PictureUploadRequest;
+import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.PictureVO;
@@ -35,6 +32,20 @@ public interface PictureService extends IService<Picture> {
     PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
+
+    /**
+     * 删除图片
+     * @param pictureId 图片id
+     * @param loginUser 登录用户
+     */
+    void deletePicture(Long pictureId, User loginUser);
+
+    /**
+     * 编辑图片
+     * @param pictureEditRequest 图片编辑请求
+     * @param loginUser 登录用户
+     */
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 
     /**
      * 获取图片信息
@@ -86,4 +97,11 @@ public interface PictureService extends IService<Picture> {
      * @param oldPicture 图片
      */
     void clearPictureFile(Picture oldPicture);
+
+    /**
+     * 检查图片权限
+     * @param picture 图片
+     * @param loginUser 登录用户
+     */
+    void checkPictureAuth(Picture picture, User loginUser);
 }

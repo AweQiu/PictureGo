@@ -83,6 +83,11 @@ public class PictureVO {
     private Long userId;
 
     /**
+     * 所属空间id
+     */
+    private Long spaceId;
+
+    /**
      * 创建时间
      */
     private Date createTime;
