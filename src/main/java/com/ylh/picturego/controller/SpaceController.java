@@ -20,8 +20,10 @@ import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.Space;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
+import com.ylh.picturego.model.enums.SpaceLevelEnum;
 import com.ylh.picturego.model.enums.UserRoleEnum;
 import com.ylh.picturego.model.vo.PictureVO;
+import com.ylh.picturego.model.vo.SpaceLevel;
 import com.ylh.picturego.model.vo.SpaceVO;
 import com.ylh.picturego.service.SpaceService;
 import com.ylh.picturego.service.UserService;
@@ -30,6 +32,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -219,5 +225,22 @@ public class SpaceController {
         );
         // 获取封装类
         return ResultUtils.success(spaceService.getSpaceVOPage(spacePage, request));
+    }
+
+    /**
+     * 获取空间级别列表，供前端展示
+     * @return 结果
+     */
+    @GetMapping("/list/level")
+    public Result<List<SpaceLevel>> listSpaceLevel() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values())
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()
+                ))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
     }
 }
