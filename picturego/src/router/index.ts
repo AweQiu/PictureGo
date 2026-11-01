@@ -37,7 +37,7 @@ const router = createRouter({
           path: 'space/create',
           name: 'spaceCreate',
           component: () => import('../pages/SpaceCreatePage.vue'),
-          meta: { title: '创建空间', requiresAdmin: true },
+          meta: { title: '创建空间' },
         },
         {
           path: 'user-manage',

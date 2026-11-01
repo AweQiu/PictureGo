@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getUserById } from '../api/user'
 import { addSpace, listSpaceLevel } from '../api/space'
+import { useUserStore } from '../store/user'
 import { formatFileSize } from '../utils/format'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+
+/** 管理员模式：带 userId 参数，为指定用户创建；否则为当前登录用户自建 */
+const adminUserId = route.query.userId as string | undefined
+const isAdminMode = computed(() => !!adminUserId)
 
 const targetUser = ref<User | null>(null)
 const levelList = ref<SpaceLevel[]>([])
@@ -16,19 +22,28 @@ const submitting = ref(false)
 
 const createForm = reactive({
   spaceName: '',
-  spaceLevel: undefined as number | undefined,
+  // 普通用户固定为普通空间（级别选择置灰），管理员可选
+  spaceLevel: (isAdminMode.value ? undefined : 0) as number | undefined,
 })
 
+/** 自建模式下展示用的当前用户名 */
+const selfName = computed(
+  () => userStore.loginUser?.userName || userStore.loginUser?.userAccount || '',
+)
+
 async function fetchData() {
-  const userId = route.query.userId as string | undefined
-  if (!userId) {
-    message.warning('缺少目标用户，请从用户管理页进入')
-    router.replace({ name: 'userManage' })
+  if (isAdminMode.value && !userStore.isAdmin) {
+    message.warning('没有权限为其他用户创建空间')
+    router.replace({ name: 'mySpace' })
     return
   }
   pageLoading.value = true
   try {
-    const [user, levels] = await Promise.all([getUserById(userId), listSpaceLevel()])
+    const requests: [Promise<User | null>, Promise<SpaceLevel[]>] = [
+      isAdminMode.value ? getUserById(adminUserId!) : Promise.resolve(null),
+      listSpaceLevel(),
+    ]
+    const [user, levels] = await Promise.all(requests)
     targetUser.value = user
     levelList.value = levels ?? []
   } catch (error) {
@@ -39,16 +54,20 @@ async function fetchData() {
 }
 
 async function handleSubmit() {
-  if (!targetUser.value) return
+  if (isAdminMode.value && !targetUser.value) return
   submitting.value = true
   try {
     await addSpace({
-      userId: targetUser.value.id,
+      userId: isAdminMode.value ? targetUser.value!.id : undefined,
       spaceName: createForm.spaceName.trim() || undefined,
       spaceLevel: createForm.spaceLevel,
     })
-    message.success(`已为用户「${targetUser.value.userName || targetUser.value.userAccount}」创建空间`)
-    router.replace({ name: 'userManage' })
+    message.success(
+      isAdminMode.value
+        ? `已为用户「${targetUser.value!.userName || targetUser.value!.userAccount}」创建空间`
+        : '私人空间创建成功',
+    )
+    router.replace({ name: isAdminMode.value ? 'userManage' : 'mySpace' })
   } catch (error) {
     message.error(error instanceof Error ? error.message : '创建空间失败')
   } finally {
@@ -63,11 +82,14 @@ onMounted(fetchData)
   <a-spin :spinning="pageLoading">
     <a-card :bordered="false" title="创建空间" class="space-create-card">
       <a-alert
-        v-if="targetUser"
         type="info"
         show-icon
         class="target-tip"
-        :message="`为用户「${targetUser.userName || targetUser.userAccount}」（ID：${targetUser.id}）创建私人空间`"
+        :message="
+          isAdminMode && targetUser
+            ? `为用户「${targetUser.userName || targetUser.userAccount}」（ID：${targetUser.id}）创建私人空间`
+            : `为「${selfName}」创建私人空间`
+        "
       />
 
       <a-form layout="vertical" class="create-form">
@@ -83,8 +105,9 @@ onMounted(fetchData)
         <a-form-item label="空间级别">
           <a-select
             v-model:value="createForm.spaceLevel"
-            placeholder="选填，默认普通版"
-            allow-clear
+            :placeholder="isAdminMode ? '选填，默认普通空间' : '普通空间'"
+            :disabled="!isAdminMode"
+            :allow-clear="isAdminMode"
             :options="
               levelList.map((level) => ({
                 value: level.value,
@@ -92,6 +115,9 @@ onMounted(fetchData)
               }))
             "
           />
+          <div v-if="!isAdminMode" class="level-hint">
+            个人自建空间默认为普通空间，更高级别请联系管理员调整
+          </div>
         </a-form-item>
         <a-form-item>
           <a-space>
@@ -140,6 +166,12 @@ onMounted(fetchData)
 
 .create-form {
   max-width: 480px;
+}
+
+.level-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
 .level-table {

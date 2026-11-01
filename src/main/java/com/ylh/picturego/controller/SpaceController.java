@@ -1,7 +1,6 @@
 package com.ylh.picturego.controller;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ylh.picturego.annotation.AuthCheck;
 import com.ylh.picturego.common.DeleteRequest;
@@ -10,19 +9,13 @@ import com.ylh.picturego.common.ResultUtils;
 import com.ylh.picturego.constant.UserConstant;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
-import com.ylh.picturego.model.dto.picture.PictureEditRequest;
-import com.ylh.picturego.model.dto.picture.PictureQueryRequest;
 import com.ylh.picturego.model.dto.space.SpaceAddRequest;
 import com.ylh.picturego.model.dto.space.SpaceEditRequest;
 import com.ylh.picturego.model.dto.space.SpaceQueryRequest;
 import com.ylh.picturego.model.dto.space.SpaceUpdateRequest;
-import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.Space;
 import com.ylh.picturego.model.entity.User;
-import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
 import com.ylh.picturego.model.enums.SpaceLevelEnum;
-import com.ylh.picturego.model.enums.UserRoleEnum;
-import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.model.vo.SpaceLevel;
 import com.ylh.picturego.model.vo.SpaceVO;
 import com.ylh.picturego.service.SpaceService;
@@ -48,6 +41,13 @@ public class SpaceController {
     @Resource
     private SpaceService spaceService;
 
+    /**
+     * 添加空间（普通用户）
+     *
+     * @param spaceAddRequest 添加请求
+     * @param request 请求
+     * @return 结果
+     */
     @PostMapping("/add")
     public Result<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request) {
         ThrowUtils.throwException(spaceAddRequest == null, ErrorCode.PARAMS_ERROR);

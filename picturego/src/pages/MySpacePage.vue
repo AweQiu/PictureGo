@@ -271,7 +271,11 @@ onMounted(async () => {
     </a-card>
 
     <a-card v-else-if="!spaceLoading" :bordered="false" class="space-card">
-      <a-empty description="你还没有私人空间，可联系管理员创建" />
+      <a-empty description="你还没有私人空间">
+        <a-button type="primary" @click="router.push({ name: 'spaceCreate' })">
+          创建空间
+        </a-button>
+      </a-empty>
     </a-card>
   </a-spin>
 

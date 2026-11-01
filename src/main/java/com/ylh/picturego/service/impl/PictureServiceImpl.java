@@ -405,8 +405,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             picture.setReviewerId(loginUser.getId());
             picture.setReviewTime(new Date());
         }else {
-            // 普通用户待审核
-            picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+            // 普通用户
+            if (picture.getSpaceId() != null) {
+                // 私有空间，自动过审
+                picture.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+                picture.setReviewMessage("私有空间自动过审");
+            }else {
+                // 公共图库，普通用户待审核
+                picture.setReviewStatus(PictureReviewStatusEnum.REVIEWING.getValue());
+            }
         }
     }
 

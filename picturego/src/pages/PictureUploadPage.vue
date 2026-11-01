@@ -269,7 +269,9 @@ onBeforeUnmount(() => {
           我的私人空间{{ mySpace ? `（${mySpace.spaceName}）` : '' }}
         </a-radio>
       </a-radio-group>
-      <span v-if="!mySpace" class="target-hint">暂无私人空间，可联系管理员创建</span>
+      <span v-if="!mySpace" class="target-hint">
+        暂无私人空间，可先到「我的空间」页创建
+      </span>
     </div>
     <a-tabs v-model:activeKey="activeTab">
       <a-tab-pane key="file" tab="文件上传">
