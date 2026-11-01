@@ -196,7 +196,6 @@ public class PictureController {
             // 私有空间图片
             User loginUser = userService.getLoginUser(request);
             pictureService.checkPictureAuth(picture, loginUser);
-
         }
         // 只返回审核通过的图片
         ThrowUtils.throwException(picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getValue(), ErrorCode.OPERATION_ERROR, "图片审核未通过");
@@ -215,6 +214,8 @@ public class PictureController {
     public Result<Page<Picture>> listPictureByPage(@RequestBody PictureQueryRequest pictureQueryRequest) {
         long current = pictureQueryRequest.getCurrent();
         long size = pictureQueryRequest.getPageSize();
+        // 管理员只能管理公共图库
+        pictureQueryRequest.setIsPublic(true);
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(
                 new Page<>(current, size),
@@ -247,6 +248,7 @@ public class PictureController {
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwException(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
             ThrowUtils.throwException(!loginUser.getId().equals(space.getUserId()), ErrorCode.NO_AUTH_ERROR, "无空间权限");
+            pictureQueryRequest.setIsPublic(false);
         }
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(
@@ -269,8 +271,21 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwException(size > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
-        // 只允许查询通过审核的图片
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        // 空间权限校验
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId == null) {
+            // 公共图库
+            // 只允许查询通过审核的图片
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setIsPublic(true);
+        }else {
+            // 私有空间
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwException(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            ThrowUtils.throwException(!loginUser.getId().equals(space.getUserId()), ErrorCode.NO_AUTH_ERROR, "无空间权限");
+            pictureQueryRequest.setIsPublic(false);
+        }
         // 查询二级缓存
         Page<PictureVO> cachedPictureVOPage = multiLevelCache.getCacheValue(
                 "picturego:listPictureVOByPage",

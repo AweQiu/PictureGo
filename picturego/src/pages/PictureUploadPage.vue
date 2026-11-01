@@ -8,6 +8,7 @@ import {
   uploadPictureByBatch,
   uploadPictureByUrl,
 } from '../api/picture'
+import { listSpaceVOByPage } from '../api/space'
 import { useUserStore } from '../store/user'
 import { formatFileSize } from '../utils/format'
 
@@ -45,6 +46,26 @@ function resetMetaForm(meta: PictureMetaForm) {
 const userStore = useUserStore()
 const categoryOptions = ref<string[]>([])
 const tagOptions = ref<string[]>([])
+
+// ---------- 上传位置（公共图库 / 私人空间） ----------
+const mySpace = ref<SpaceVO | null>(null)
+const uploadTarget = ref<'public' | 'space'>('public')
+
+async function fetchMySpace() {
+  const userId = userStore.loginUser?.id
+  if (!userId) return
+  try {
+    const page = await listSpaceVOByPage({ userId, current: 1, pageSize: 1 })
+    mySpace.value = page.records?.[0] ?? null
+  } catch (error) {
+    console.error('获取私人空间失败', error)
+  }
+}
+
+/** 当前生效的 spaceId：选择私人空间时为其 id，否则为空表示公共图库 */
+function currentSpaceId(): string | undefined {
+  return uploadTarget.value === 'space' && mySpace.value ? mySpace.value.id : undefined
+}
 
 async function fetchTagCategory() {
   try {
@@ -92,7 +113,10 @@ async function handleConfirm() {
   if (!selectedFile.value) return
   uploading.value = true
   try {
-    await uploadPicture(selectedFile.value, buildMetaPayload(fileMeta))
+    await uploadPicture(selectedFile.value, {
+      ...buildMetaPayload(fileMeta),
+      spaceId: currentSpaceId(),
+    })
     message.success('图片上传成功')
     clearSelection()
   } catch (error) {
@@ -181,6 +205,7 @@ async function handleUrlUpload() {
     await uploadPictureByUrl({
       ...buildMetaPayload(urlMeta),
       url: urlPreviewUrl.value,
+      spaceId: currentSpaceId(),
     })
     message.success('图片上传成功')
     clearUrlSelection()
@@ -224,7 +249,10 @@ async function handleBatchUpload() {
   }
 }
 
-onMounted(fetchTagCategory)
+onMounted(() => {
+  fetchTagCategory()
+  fetchMySpace()
+})
 onBeforeUnmount(() => {
   clearSelection()
   clearUrlSelection()
@@ -233,6 +261,16 @@ onBeforeUnmount(() => {
 
 <template>
   <a-card :bordered="false" title="上传图片" class="upload-card">
+    <div class="target-row">
+      <span class="target-label">上传位置</span>
+      <a-radio-group v-model:value="uploadTarget" :disabled="uploading || urlUploading">
+        <a-radio value="public">公共图库</a-radio>
+        <a-radio value="space" :disabled="!mySpace">
+          我的私人空间{{ mySpace ? `（${mySpace.spaceName}）` : '' }}
+        </a-radio>
+      </a-radio-group>
+      <span v-if="!mySpace" class="target-hint">暂无私人空间，可联系管理员创建</span>
+    </div>
     <a-tabs v-model:activeKey="activeTab">
       <a-tab-pane key="file" tab="文件上传">
         <a-upload-dragger
@@ -469,6 +507,24 @@ onBeforeUnmount(() => {
 <style scoped>
 .upload-card {
   border-radius: 12px;
+}
+
+.target-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 12px;
+}
+
+.target-label {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #1f2d3d;
+}
+
+.target-hint {
+  font-size: 12px;
+  color: #bfbfbf;
 }
 
 .upload-dragger :deep(.ant-upload-drag) {

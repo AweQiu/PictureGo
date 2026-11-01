@@ -28,6 +28,18 @@ const router = createRouter({
           meta: { title: '上传图片' },
         },
         {
+          path: 'my-space',
+          name: 'mySpace',
+          component: () => import('../pages/MySpacePage.vue'),
+          meta: { title: '我的空间' },
+        },
+        {
+          path: 'space/create',
+          name: 'spaceCreate',
+          component: () => import('../pages/SpaceCreatePage.vue'),
+          meta: { title: '创建空间', requiresAdmin: true },
+        },
+        {
           path: 'user-manage',
           name: 'userManage',
           component: () => import('../pages/UserManagePage.vue'),

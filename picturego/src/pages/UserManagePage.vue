@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
+import { Modal, message } from 'ant-design-vue'
 import {
   DeleteOutlined,
+  DownOutlined,
   EditOutlined,
   FileSearchOutlined,
   PlusOutlined,
@@ -17,6 +19,7 @@ import AvatarUpload from '../components/AvatarUpload.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 
 const userStore = useUserStore()
+const router = useRouter()
 
 // ---------- 查询与分页 ----------
 const queryForm = reactive({
@@ -212,7 +215,22 @@ async function handleDialogSubmit() {
   }
 }
 
+// ---------- 创建空间 ----------
+function openCreateSpace(record: UserVO) {
+  router.push({ name: 'spaceCreate', query: { userId: record.id } })
+}
+
 // ---------- 删除 ----------
+function confirmDelete(record: UserVO) {
+  Modal.confirm({
+    title: '删除用户',
+    content: `确定删除用户「${record.userName || record.userAccount}」吗？`,
+    okText: '确定',
+    cancelText: '取消',
+    onOk: () => handleDelete(record),
+  })
+}
+
 async function handleDelete(record: UserVO) {
   try {
     await deleteUser({ id: record.id })
@@ -308,27 +326,33 @@ async function handleDelete(record: UserVO) {
               <template #icon><FileSearchOutlined /></template>
               详情
             </a-button>
-            <a-button type="link" size="small" @click="openEdit(record)">
-              <template #icon><EditOutlined /></template>
-              编辑
-            </a-button>
-            <a-popconfirm
-              title="确定删除该用户吗？"
-              ok-text="确定"
-              cancel-text="取消"
-              :disabled="record.id === userStore.loginUser?.id"
-              @confirm="handleDelete(record)"
-            >
-              <a-button
-                type="link"
-                size="small"
-                danger
-                :disabled="record.id === userStore.loginUser?.id"
-              >
-                <template #icon><DeleteOutlined /></template>
-                删除
+            <a-dropdown :trigger="['click']">
+              <a-button type="link" size="small">
+                更多
+                <DownOutlined style="font-size: 10px" />
               </a-button>
-            </a-popconfirm>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="edit" @click="openEdit(record)">
+                    <EditOutlined />
+                    编辑
+                  </a-menu-item>
+                  <a-menu-item key="createSpace" @click="openCreateSpace(record)">
+                    <PlusOutlined />
+                    创建空间
+                  </a-menu-item>
+                  <a-menu-item
+                    key="delete"
+                    danger
+                    :disabled="record.id === userStore.loginUser?.id"
+                    @click="confirmDelete(record)"
+                  >
+                    <DeleteOutlined />
+                    删除
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </a-space>
         </template>
       </template>

@@ -31,6 +31,9 @@ export function uploadPicture(file: File, data: PictureUploadRequest = {}) {
   if (data.introduction) formData.append('introduction', data.introduction)
   if (data.category) formData.append('category', data.category)
   data.tags?.forEach((tag) => formData.append('tags', tag))
+  if (data.spaceId !== undefined && data.spaceId !== null) {
+    formData.append('spaceId', String(data.spaceId))
+  }
   return request.post<unknown, PictureVO>('/picture/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
@@ -47,6 +50,10 @@ export function uploadPictureByBatch(data: PictureUploadByBatchRequest) {
 
 export function updatePicture(data: PictureUpdateRequest) {
   return request.post<unknown, boolean>('/picture/update', data)
+}
+
+export function editPicture(data: PictureEditRequest) {
+  return request.post<unknown, boolean>('/picture/edit', data)
 }
 
 export function deletePicture(data: DeleteRequest) {

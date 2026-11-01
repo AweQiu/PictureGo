@@ -115,6 +115,7 @@ interface Picture {
   picScale: number
   picFormat: string
   userId: string
+  spaceId: string
   createTime: string
   editTime: string
   updateTime: string
@@ -136,6 +137,7 @@ interface PictureVO {
   picScale: number
   picFormat: string
   userId: string
+  spaceId: string
   createTime: string
   editTime: string
   updateTime: string
@@ -162,6 +164,7 @@ interface PictureQueryRequest {
   picFormat?: string
   searchText?: string
   userId?: number | string
+  spaceId?: number | string
 }
 
 interface PictureEditRequest {
@@ -187,6 +190,7 @@ interface PictureUploadRequest {
   introduction?: string
   category?: string
   tags?: string[]
+  spaceId?: number | string
 }
 
 interface PictureUploadByBatchRequest {
@@ -204,4 +208,75 @@ interface PictureReviewRequest {
 interface PictureTagCategory {
   tags: string[]
   categories: string[]
+}
+
+/** 空间实体（管理端） */
+interface Space {
+  id: string
+  spaceName: string
+  spaceLevel: number
+  maxSize: number
+  maxCount: number
+  totalSize: number
+  totalCount: number
+  userId: string
+  createTime: string
+  editTime: string
+  updateTime: string
+  isDelete: number
+}
+
+/** 空间视图（展示用） */
+interface SpaceVO {
+  id: string
+  spaceName: string
+  spaceLevel: number
+  maxSize: number
+  maxCount: number
+  totalSize: number
+  totalCount: number
+  userId: string
+  createTime: string
+  editTime: string
+  updateTime: string
+  userVO: UserVO
+}
+
+/** 空间级别说明 */
+interface SpaceLevel {
+  value: number
+  text: string
+  maxCount: number
+  maxSize: number
+}
+
+interface SpaceAddRequest {
+  spaceName?: string
+  spaceLevel?: number
+  /** 管理员为指定用户创建空间时携带 */
+  userId?: number | string
+}
+
+interface SpaceEditRequest {
+  id?: number | string
+  spaceName?: string
+}
+
+interface SpaceUpdateRequest {
+  id?: number | string
+  spaceName?: string
+  spaceLevel?: number
+  maxSize?: number
+  maxCount?: number
+}
+
+interface SpaceQueryRequest {
+  current?: number
+  pageSize?: number
+  sortField?: string
+  sortOrder?: string
+  id?: number | string
+  userId?: number | string
+  spaceName?: string
+  spaceLevel?: number
 }

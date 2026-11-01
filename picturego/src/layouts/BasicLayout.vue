@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Modal, message } from 'ant-design-vue'
 import {
   CloudUploadOutlined,
+  DatabaseOutlined,
   DownOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -25,6 +26,7 @@ const menuItems = computed(() => {
   const items = [
     { key: 'home', label: '首页', icon: () => h(HomeOutlined) },
     { key: 'pictureUpload', label: '上传图片', icon: () => h(CloudUploadOutlined) },
+    { key: 'mySpace', label: '我的空间', icon: () => h(DatabaseOutlined) },
   ]
   if (userStore.isAdmin) {
     items.push(
