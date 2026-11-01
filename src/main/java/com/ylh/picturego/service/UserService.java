@@ -1,9 +1,12 @@
 package com.ylh.picturego.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ylh.picturego.model.dto.user.UserAddRequest;
 import com.ylh.picturego.model.dto.user.UserLoginRequest;
 import com.ylh.picturego.model.dto.user.UserQueryRequest;
 import com.ylh.picturego.model.dto.user.UserRegisterRequest;
+import com.ylh.picturego.model.dto.user.UserUpdateRequest;
 import com.ylh.picturego.model.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.ylh.picturego.model.vo.LoginUserVO;
@@ -60,6 +63,49 @@ public interface UserService extends IService<User> {
      * @return 查询条件
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
+
+    /**
+     * 添加用户（管理员）
+     * @param userAddRequest 添加用户请求
+     * @param loginUser 登录用户
+     * @return 新用户 id
+     */
+    long addUser(UserAddRequest userAddRequest, User loginUser);
+
+    /**
+     * 删除用户（管理员）
+     * @param id 用户 id
+     * @param loginUser 登录用户
+     */
+    void deleteUser(Long id, User loginUser);
+
+    /**
+     * 更新用户（管理员）
+     * @param userUpdateRequest 更新请求
+     * @param loginUser 登录用户
+     */
+    void updateUser(UserUpdateRequest userUpdateRequest, User loginUser);
+
+    /**
+     * 根据 id 获取用户（管理员）
+     * @param id 用户 id
+     * @return 用户
+     */
+    User getUserById(Long id);
+
+    /**
+     * 根据 id 获取用户封装类
+     * @param id 用户 id
+     * @return 用户封装类
+     */
+    UserVO getUserVOById(Long id);
+
+    /**
+     * 分页查询用户封装类（管理员）
+     * @param userQueryRequest 查询请求
+     * @return 用户封装类分页
+     */
+    Page<UserVO> listUserVOPage(UserQueryRequest userQueryRequest);
 
     /**
      * 是否是管理员

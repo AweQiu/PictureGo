@@ -25,7 +25,7 @@ export function updateUser(data: UserUpdateRequest) {
 }
 
 export function deleteUser(data: DeleteRequest) {
-  return request.post<unknown, boolean>('/user/delete', null, { params: data })
+  return request.post<unknown, boolean>('/user/delete', data)
 }
 
 export function listUserVOByPage(data: UserQueryRequest) {
