@@ -44,6 +44,32 @@ public class MultiLevelCache {
     }
 
     /**
+     * 读取多级缓存，未命中时执行 dbLoader 回源，并同时回填本地缓存和 Redis 缓存
+     *
+     * @param cacheKeyPrefix 缓存键前缀
+     * @param queryRequest 查询请求
+     * @param typeReference 返回值类型
+     * @param dbLoader 缓存未命中时的数据加载器
+     * @return 缓存值或回源结果
+     */
+    public <T> T getOrLoad(
+            String cacheKeyPrefix,
+            Object queryRequest,
+            TypeReference<T> typeReference,
+            Supplier<T> dbLoader
+    ) {
+        // 先查多级缓存
+        T cachedValue = getCacheValue(cacheKeyPrefix, queryRequest, typeReference);
+        if (cachedValue != null) {
+            return cachedValue;
+        }
+        // 未命中则回源，并回填缓存
+        T loadedValue = dbLoader.get();
+        putCacheValue(cacheKeyPrefix, queryRequest, loadedValue);
+        return loadedValue;
+    }
+
+    /**
      * 同时回填本地缓存和Redis缓存
      *
      * @param cacheKeyPrefix 缓存键前缀

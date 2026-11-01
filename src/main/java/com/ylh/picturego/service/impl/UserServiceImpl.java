@@ -93,6 +93,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
+    public User getLoginUserOrNull(HttpServletRequest request) {
+        // 判断是否登录
+        Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null) {
+            return null;
+        }
+        // 从数据库查询，更新内存中的用户信息
+        return this.getById(currentUser.getId());
+    }
+
+    @Override
     public boolean userLogout(HttpServletRequest request) {
         // 判断是否登录
         Object userObj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);

@@ -2,6 +2,7 @@ package com.ylh.picturego.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -13,6 +14,7 @@ import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
 import com.ylh.picturego.manager.CosManager;
+import com.ylh.picturego.manager.cache.MultiLevelCache;
 import com.ylh.picturego.manager.upload.FilePictureUpload;
 import com.ylh.picturego.manager.upload.PictureUploadTemplate;
 import com.ylh.picturego.manager.upload.UrlPictureUpload;
@@ -22,6 +24,7 @@ import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.Space;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.enums.PictureReviewStatusEnum;
+import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
 import com.ylh.picturego.model.vo.UserVO;
 import com.ylh.picturego.service.PictureService;
@@ -29,7 +32,6 @@ import com.ylh.picturego.mapper.PictureMapper;
 import com.ylh.picturego.service.SpaceService;
 import com.ylh.picturego.service.UserService;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -40,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +57,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> implements PictureService {
+
+    /**
+     * 图片列表缓存 key 前缀（沿用原 Controller 中的取值，保证历史缓存 key 不变）
+     */
+    private static final String LIST_PICTURE_VO_CACHE_PREFIX = "picturego:listPictureVOByPage";
 
     @Resource
     private UserService userService;
@@ -72,6 +80,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
 
     @Resource
     private TransactionTemplate transactionTemplate;
+
+    @Resource
+    private MultiLevelCache multiLevelCache;
 
     @Override
     public void validPicture(Picture picture) {
@@ -252,7 +263,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public PictureVO getPictureVO(Picture picture, HttpServletRequest request) {
+    public PictureVO getPictureVO(Picture picture) {
         // 对象转封装类
         PictureVO pictureVO = PictureVO.objToVo(picture);
         // 关联查询用户信息
@@ -265,7 +276,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
     }
 
     @Override
-    public Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request) {
+    public Page<PictureVO> getPictureVOPage(Page<Picture> picturePage) {
         List<Picture> pictureList = picturePage.getRecords();
         Page<PictureVO> pictureVOPage = new Page<>(picturePage.getCurrent(), picturePage.getSize(), picturePage.getTotal());
         if (CollUtil.isEmpty(pictureList)) {
@@ -292,6 +303,138 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
         });
         pictureVOPage.setRecords(pictureVOList);
         return pictureVOPage;
+    }
+
+    @Override
+    public Picture getPictureById(Long id) {
+        ThrowUtils.throwException(id <= 0, ErrorCode.PARAMS_ERROR, "图片ID有误");
+        // 查询数据库
+        Picture picture = this.getById(id);
+        ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        return picture;
+    }
+
+    @Override
+    public PictureVO getPictureVOById(Long id, User loginUser) {
+        ThrowUtils.throwException(id <= 0, ErrorCode.PARAMS_ERROR, "图片ID有误");
+        // 查询数据库
+        Picture picture = this.getById(id);
+        ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 空间权限校验
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null) {
+            // 私有空间图片，必须登录且是空间主人
+            ThrowUtils.throwException(loginUser == null, ErrorCode.NOT_LOGIN_ERROR);
+            this.checkPictureAuth(picture, loginUser);
+        }
+        // 只返回审核通过的图片
+        ThrowUtils.throwException(
+                picture.getReviewStatus() != PictureReviewStatusEnum.PASS.getValue(),
+                ErrorCode.OPERATION_ERROR, "图片审核未通过");
+        // 获取图片VO
+        return this.getPictureVO(picture);
+    }
+
+    @Override
+    public void updatePicture(PictureUpdateRequest pictureUpdateRequest, User loginUser) {
+        ThrowUtils.throwException(pictureUpdateRequest == null, ErrorCode.PARAMS_ERROR);
+        // DTO类转实体类
+        Picture picture = new Picture();
+        BeanUtil.copyProperties(pictureUpdateRequest, picture);
+        // List列表转String
+        picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));
+        // 校验图片
+        this.validPicture(picture);
+        // 存在性校验
+        long id = pictureUpdateRequest.getId();
+        Picture oldPicture = this.getById(id);
+        ThrowUtils.throwException(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 补充审核参数
+        this.fillReviewParams(picture, loginUser);
+        // 操作数据库
+        ThrowUtils.throwException(!this.updateById(picture), ErrorCode.OPERATION_ERROR, "图片更新失败");
+    }
+
+    @Override
+    public Page<Picture> listPictureByPage(PictureQueryRequest pictureQueryRequest) {
+        // 管理员只能管理公共图库
+        pictureQueryRequest.setIsPublic(true);
+        // 查询数据库
+        return this.page(
+                new Page<>(pictureQueryRequest.getCurrent(), pictureQueryRequest.getPageSize()),
+                this.getQueryWrapper(pictureQueryRequest));
+    }
+
+    @Override
+    public Page<PictureVO> listPictureVOPage(PictureQueryRequest pictureQueryRequest, User loginUser) {
+        this.prepareListQuery(pictureQueryRequest, loginUser);
+        return this.queryPictureVOPage(pictureQueryRequest);
+    }
+
+    @Override
+    public Page<PictureVO> listPictureVOPageWithCache(PictureQueryRequest pictureQueryRequest, User loginUser) {
+        // 先做分页校验、空间权限校验和查询条件规范化，保证缓存 key 正确且私有空间不越权
+        this.prepareListQuery(pictureQueryRequest, loginUser);
+        // 读多级缓存，未命中则回源查询并回填缓存
+        return multiLevelCache.getOrLoad(
+                LIST_PICTURE_VO_CACHE_PREFIX,
+                pictureQueryRequest,
+                new TypeReference<Page<PictureVO>>() {},
+                () -> this.queryPictureVOPage(pictureQueryRequest));
+    }
+
+    @Override
+    public PictureTagCategory getPictureTagCategory() {
+        PictureTagCategory pictureTagCategory = new PictureTagCategory();
+        // 静态标签列表
+        List<String> tagList = Arrays.asList("热门", "搞笑", "生活", "高清", "艺术", "动漫", "商务", "其他");
+        // 静态分类列表
+        List<String> categoryList = Arrays.asList("模板", "电商", "表情包", "素材", "海报", "二次元", "其他");
+        // 赋值
+        pictureTagCategory.setTags(tagList);
+        pictureTagCategory.setCategories(categoryList);
+        return pictureTagCategory;
+    }
+
+    /**
+     * 图片列表查询的公共前置处理：分页校验 + 空间权限校验 + 查询条件规范化
+     *
+     * @param pictureQueryRequest 图片查询请求
+     * @param loginUser 登录用户（允许为 null，公共图库支持匿名访问）
+     */
+    private void prepareListQuery(PictureQueryRequest pictureQueryRequest, User loginUser) {
+        // 限制爬虫
+        ThrowUtils.throwException(pictureQueryRequest.getPageSize() > 20, ErrorCode.PARAMS_ERROR, "分页大小不能超过20");
+        // 空间权限校验
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId == null) {
+            // 公共图库
+            // 只允许查询通过审核的图片
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setIsPublic(true);
+        } else {
+            // 私有空间
+            ThrowUtils.throwException(loginUser == null, ErrorCode.NOT_LOGIN_ERROR);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwException(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            ThrowUtils.throwException(!loginUser.getId().equals(space.getUserId()), ErrorCode.NO_AUTH_ERROR, "无空间权限");
+            pictureQueryRequest.setIsPublic(false);
+        }
+    }
+
+    /**
+     * 查询图片分页并转换为 PictureVO 分页
+     *
+     * @param pictureQueryRequest 图片查询请求
+     * @return 图片封装类分页
+     */
+    private Page<PictureVO> queryPictureVOPage(PictureQueryRequest pictureQueryRequest) {
+        // 查询数据库
+        Page<Picture> picturePage = this.page(
+                new Page<>(pictureQueryRequest.getCurrent(), pictureQueryRequest.getPageSize()),
+                this.getQueryWrapper(pictureQueryRequest));
+        // 获取封装类
+        return this.getPictureVOPage(picturePage);
     }
 
     @Override

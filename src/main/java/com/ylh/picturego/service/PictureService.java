@@ -6,8 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
+import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
 * @author V0411
@@ -50,18 +50,67 @@ public interface PictureService extends IService<Picture> {
     /**
      * 获取图片信息
      * @param picture 图片
-     * @param request 请求
      * @return 图片信息
      */
-    PictureVO getPictureVO(Picture picture, HttpServletRequest request);
+    PictureVO getPictureVO(Picture picture);
 
     /**
      * 获取图片信息分页
      * @param picturePage 图片分页
-     * @param request 请求
      * @return 图片信息分页
      */
-    Page<PictureVO> getPictureVOPage(Page<Picture> picturePage, HttpServletRequest request);
+    Page<PictureVO> getPictureVOPage(Page<Picture> picturePage);
+
+    /**
+     * 根据 id 获取图片（管理员）
+     * @param id 图片 id
+     * @return 图片
+     */
+    Picture getPictureById(Long id);
+
+    /**
+     * 根据 id 获取图片封装类
+     * @param id 图片 id
+     * @param loginUser 登录用户（允许为 null，公共图库支持匿名访问）
+     * @return 图片封装类
+     */
+    PictureVO getPictureVOById(Long id, User loginUser);
+
+    /**
+     * 更新图片（管理员）
+     * @param pictureUpdateRequest 图片更新请求
+     * @param loginUser 登录用户
+     */
+    void updatePicture(PictureUpdateRequest pictureUpdateRequest, User loginUser);
+
+    /**
+     * 分页查询图片（管理员，仅公共图库）
+     * @param pictureQueryRequest 图片查询请求
+     * @return 图片分页
+     */
+    Page<Picture> listPictureByPage(PictureQueryRequest pictureQueryRequest);
+
+    /**
+     * 分页查询图片封装类（公共图库 / 私有空间）
+     * @param pictureQueryRequest 图片查询请求
+     * @param loginUser 登录用户（允许为 null，公共图库支持匿名访问）
+     * @return 图片封装类分页
+     */
+    Page<PictureVO> listPictureVOPage(PictureQueryRequest pictureQueryRequest, User loginUser);
+
+    /**
+     * 分页查询图片封装类（带多级缓存，公共图库 / 私有空间）
+     * @param pictureQueryRequest 图片查询请求
+     * @param loginUser 登录用户（允许为 null，公共图库支持匿名访问）
+     * @return 图片封装类分页
+     */
+    Page<PictureVO> listPictureVOPageWithCache(PictureQueryRequest pictureQueryRequest, User loginUser);
+
+    /**
+     * 获取图片标签和分类（静态）
+     * @return 标签和分类
+     */
+    PictureTagCategory getPictureTagCategory();
 
     /**
      * 获取查询条件
