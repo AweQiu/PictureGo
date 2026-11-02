@@ -12,11 +12,13 @@ import {
 } from '@ant-design/icons-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import { addUser, deleteUser, getUserById, listUserVOByPage, updateUser } from '../api/user'
+import { listSpaceVOByPage } from '../api/space'
 import { USER_ROLE, USER_ROLE_OPTIONS, USER_ROLE_TEXT } from '../constants/enums'
 import { useUserStore } from '../store/user'
 import { formatDateTime } from '../utils/format'
 import AvatarUpload from '../components/AvatarUpload.vue'
 import UserAvatar from '../components/UserAvatar.vue'
+import SpaceManageModal from '../components/SpaceManageModal.vue'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -38,6 +40,7 @@ const pagination = reactive({
 
 /** 用户 ID -> 编辑时间（UserVO 不含 updateTime，按需从 /user/get 取） */
 const updateTimeMap = reactive<Record<string, string>>({})
+const spaceMap = reactive<Record<string, SpaceVO | null>>({})
 
 async function resolveUpdateTimes(records: UserVO[]) {
   await Promise.all(
@@ -48,6 +51,20 @@ async function resolveUpdateTimes(records: UserVO[]) {
         updateTimeMap[record.id] = user.updateTime
       } catch {
         updateTimeMap[record.id] = ''
+      }
+    }),
+  )
+}
+
+async function resolveSpaces(records: UserVO[]) {
+  await Promise.all(
+    records.map(async (record) => {
+      if (record.id in spaceMap) return
+      try {
+        const page = await listSpaceVOByPage({ userId: record.id, current: 1, pageSize: 1 })
+        spaceMap[record.id] = page.records?.[0] ?? null
+      } catch {
+        spaceMap[record.id] = null
       }
     }),
   )
@@ -66,7 +83,7 @@ async function fetchData() {
     const records = page.records ?? []
     userList.value = records
     total.value = Number(page.total ?? 0)
-    await resolveUpdateTimes(records)
+    await Promise.all([resolveUpdateTimes(records), resolveSpaces(records)])
   } catch (error) {
     message.error(error instanceof Error ? error.message : '查询用户失败')
   } finally {
@@ -100,16 +117,10 @@ const columns = [
   { title: '账号', dataIndex: 'userAccount', key: 'userAccount', width: 130, ellipsis: true },
   { title: '用户名', dataIndex: 'userName', key: 'userName', width: 130, ellipsis: true },
   { title: '头像', dataIndex: 'userAvatar', key: 'userAvatar', width: 80 },
-  {
-    title: '简介',
-    dataIndex: 'userProfile',
-    key: 'userProfile',
-    width: 220,
-    ellipsis: true,
-  },
   { title: '角色', dataIndex: 'userRole', key: 'userRole', width: 100 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170 },
   { title: '编辑时间', key: 'updateTime', width: 170 },
+  { title: '空间', key: 'space', width: 160, ellipsis: true },
   { title: '操作', key: 'action', width: 210, fixed: 'right' as const },
 ]
 
@@ -126,6 +137,22 @@ const detailUser = ref<UserVO | null>(null)
 function openDetail(record: UserVO) {
   detailUser.value = record
   detailVisible.value = true
+}
+
+// ---------- 空间详情 / 编辑 ----------
+const spaceDetailVisible = ref(false)
+const selectedSpace = ref<SpaceVO | null>(null)
+
+function openSpaceDetail(record: UserVO) {
+  const space = spaceMap[record.id]
+  if (!space) return
+  selectedSpace.value = space
+  spaceDetailVisible.value = true
+}
+
+function handleSpaceSaved(space: SpaceVO) {
+  spaceMap[space.userId] = space
+  selectedSpace.value = space
 }
 
 // ---------- 新增 / 编辑 ----------
@@ -298,7 +325,7 @@ async function handleDelete(record: UserVO) {
         pageSizeOptions: ['10', '20', '50'],
         showTotal: (count: number) => `共 ${count} 条`,
       }"
-      :scroll="{ x: 1350 }"
+      :scroll="{ x: 1290 }"
       row-key="id"
       @change="handleTableChange"
     >
@@ -311,14 +338,24 @@ async function handleDelete(record: UserVO) {
             {{ USER_ROLE_TEXT[record.userRole] ?? record.userRole }}
           </a-tag>
         </template>
-        <template v-else-if="column.key === 'userProfile'">
-          <span>{{ record.userProfile || '—' }}</span>
-        </template>
         <template v-else-if="column.key === 'createTime'">
           <span>{{ formatDateTime(record.createTime) }}</span>
         </template>
         <template v-else-if="column.key === 'updateTime'">
           <span>{{ formatDateTime(updateTimeMap[record.id]) }}</span>
+        </template>
+        <template v-else-if="column.key === 'space'">
+          <a-button
+            v-if="spaceMap[record.id]"
+            type="link"
+            size="small"
+            class="space-link"
+            @click="openSpaceDetail(record)"
+          >
+            {{ spaceMap[record.id]!.spaceName || '未命名空间' }}
+          </a-button>
+          <span v-else-if="record.id in spaceMap" class="space-empty">未创建</span>
+          <span v-else class="space-empty">加载中...</span>
         </template>
         <template v-else-if="column.key === 'action'">
           <a-space :size="0">
@@ -429,6 +466,12 @@ async function handleDelete(record: UserVO) {
       </a-form-item>
     </a-form>
   </a-modal>
+
+  <SpaceManageModal
+    v-model:open="spaceDetailVisible"
+    :space="selectedSpace"
+    @saved="handleSpaceSaved"
+  />
 </template>
 
 <style scoped>
@@ -453,6 +496,18 @@ async function handleDelete(record: UserVO) {
 
 .toolbar-add {
   margin-left: auto;
+}
+
+.space-link {
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.space-empty {
+  color: #8c8c8c;
 }
 
 .detail-body {
