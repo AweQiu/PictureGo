@@ -97,7 +97,20 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      */
     private Long spaceId;
 
+    /**
+     * 是否公开
+     */
     private Boolean isPublic; // spaceId为空，且isPublic为true，则表示查询公共图库图片
+
+    /**
+     * 开始编辑时间
+     */
+    private Date startEditTime;
+
+    /**
+     * 结束编辑时间
+     */
+    private Date endEditTime;
 
     private static final long serialVersionUID = 1L;
 }

@@ -48,6 +48,13 @@ public interface PictureService extends IService<Picture> {
     void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 
     /**
+     * 更新图片（管理员）
+     * @param pictureUpdateRequest 图片更新请求
+     * @param loginUser 登录用户
+     */
+    void updatePicture(PictureUpdateRequest pictureUpdateRequest, User loginUser);
+
+    /**
      * 获取图片信息
      * @param picture 图片
      * @return 图片信息
@@ -75,13 +82,6 @@ public interface PictureService extends IService<Picture> {
      * @return 图片封装类
      */
     PictureVO getPictureVOById(Long id, User loginUser);
-
-    /**
-     * 更新图片（管理员）
-     * @param pictureUpdateRequest 图片更新请求
-     * @param loginUser 登录用户
-     */
-    void updatePicture(PictureUpdateRequest pictureUpdateRequest, User loginUser);
 
     /**
      * 分页查询图片（管理员，仅公共图库）

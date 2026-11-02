@@ -1,3 +1,4 @@
+<!-- 全站图片管理（仅管理员），由 PicturePublicPage 的「全站图片」标签页内嵌使用 -->
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -160,7 +161,7 @@ const columns = [
   { title: '审核结果', key: 'review', width: 220 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170 },
   { title: '编辑时间', dataIndex: 'updateTime', key: 'updateTime', width: 170 },
-  { title: '操作', key: 'action', width: 340, fixed: 'right' as const },
+  { title: '操作', key: 'action', width: 390, fixed: 'right' as const },
 ]
 
 // ---------- 编辑 ----------
@@ -329,7 +330,7 @@ async function handleDelete(record: Picture) {
 </script>
 
 <template>
-  <a-card :bordered="false" title="图片管理" class="picture-manage-card">
+  <div class="picture-manage">
     <div class="toolbar">
       <a-input
         v-model:value="queryForm.searchText"
@@ -392,7 +393,7 @@ async function handleDelete(record: Picture) {
         pageSizeOptions: ['10', '20', '50'],
         showTotal: (count: number) => `共 ${count} 条`,
       }"
-      :scroll="{ x: 1900 }"
+      :scroll="{ x: 1950 }"
       row-key="id"
       @change="handleTableChange"
     >
@@ -484,7 +485,7 @@ async function handleDelete(record: Picture) {
         </template>
       </template>
     </a-table>
-  </a-card>
+  </div>
 
   <a-modal
     v-model:open="editVisible"
@@ -579,10 +580,6 @@ async function handleDelete(record: Picture) {
 </template>
 
 <style scoped>
-.picture-manage-card {
-  border-radius: 12px;
-}
-
 .toolbar {
   display: flex;
   flex-wrap: wrap;

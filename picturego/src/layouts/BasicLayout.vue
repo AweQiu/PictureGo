@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { Modal, message } from 'ant-design-vue'
 import {
   CloudUploadOutlined,
-  DatabaseOutlined,
   DownOutlined,
   HomeOutlined,
   LogoutOutlined,
@@ -20,25 +19,27 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const selectedKeys = computed(() => [route.name as string])
+/** 子路由可通过 meta.menuKey 指定要高亮的顶栏菜单 */
+const activeMenuKey = computed(
+  () => (route.meta.menuKey as string | undefined) ?? (route.name as string),
+)
+const selectedKeys = computed(() => [activeMenuKey.value])
 
 const menuItems = computed(() => {
   const items = [
     { key: 'home', label: '首页', icon: () => h(HomeOutlined) },
     { key: 'pictureUpload', label: '上传图片', icon: () => h(CloudUploadOutlined) },
-    { key: 'mySpace', label: '我的空间', icon: () => h(DatabaseOutlined) },
+    // 图片管理面向所有登录用户：管理员可切换「我发布的 / 全站图片」
+    { key: 'pictureManage', label: '图片管理', icon: () => h(PictureOutlined) },
   ]
   if (userStore.isAdmin) {
-    items.push(
-      { key: 'pictureManage', label: '图片管理', icon: () => h(PictureOutlined) },
-      { key: 'userManage', label: '用户管理', icon: () => h(TeamOutlined) },
-    )
+    items.push({ key: 'userManage', label: '用户管理', icon: () => h(TeamOutlined) })
   }
   return items
 })
 
 function handleMenuClick({ key }: { key: string }) {
-  if (key !== route.name) {
+  if (key !== activeMenuKey.value) {
     router.push({ name: key })
   }
 }

@@ -28,10 +28,31 @@ const router = createRouter({
           meta: { title: '上传图片' },
         },
         {
+          // 图片管理 = 侧边栏「公共图库」+「我的空间」
+          path: 'picture-manage',
+          name: 'pictureManage',
+          redirect: { name: 'picturePublic' },
+          component: () => import('../layouts/PictureManageLayout.vue'),
+          meta: { title: '图片管理', menuKey: 'pictureManage' },
+          children: [
+            {
+              path: 'public',
+              name: 'picturePublic',
+              component: () => import('../pages/PicturePublicPage.vue'),
+              meta: { title: '公共图库' },
+            },
+            {
+              path: 'my-space',
+              name: 'mySpace',
+              component: () => import('../pages/MySpacePage.vue'),
+              meta: { title: '我的空间' },
+            },
+          ],
+        },
+        {
+          // 兼容旧的 /my-space 链接，统一进入图片管理页的「我的空间」
           path: 'my-space',
-          name: 'mySpace',
-          component: () => import('../pages/MySpacePage.vue'),
-          meta: { title: '我的空间' },
+          redirect: { name: 'mySpace' },
         },
         {
           path: 'space/create',
@@ -44,12 +65,6 @@ const router = createRouter({
           name: 'userManage',
           component: () => import('../pages/UserManagePage.vue'),
           meta: { title: '用户管理', requiresAdmin: true },
-        },
-        {
-          path: 'picture-manage',
-          name: 'pictureManage',
-          component: () => import('../pages/PictureManagePage.vue'),
-          meta: { title: '图片管理', requiresAdmin: true },
         },
         {
           path: 'picture/:id',

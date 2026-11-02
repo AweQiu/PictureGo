@@ -145,9 +145,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public void deleteUser(Long id, User loginUser) {
-        // 校验目标用户存在及等级权限（禁止平级操作）
+        // 校验目标用户存在
         User targetUser = this.getById(id);
         ThrowUtils.throwException(targetUser == null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        // 校验用户等级权限（禁止平级操作）
         ThrowUtils.throwException(
                 !this.canManageUser(loginUser, targetUser),
                 ErrorCode.NO_AUTH_ERROR, "无权限操作同级或更高级别的用户");
@@ -157,9 +158,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public void updateUser(UserUpdateRequest userUpdateRequest, User loginUser) {
-        // 校验目标用户存在及等级权限（禁止平级操作）
+        // 校验目标用户存在
         User targetUser = this.getById(userUpdateRequest.getId());
         ThrowUtils.throwException(targetUser == null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        // 等级权限（禁止平级操作）
         ThrowUtils.throwException(
                 !this.canManageUser(loginUser, targetUser),
                 ErrorCode.NO_AUTH_ERROR, "无权限操作同级或更高级别的用户");
