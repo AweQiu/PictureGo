@@ -67,7 +67,7 @@ function startEdit() {
   if (!spaceData.value) return
   Object.assign(spaceForm, {
     spaceLevel: spaceData.value.spaceLevel,
-    maxCount: spaceData.value.maxCount,
+    maxCount: Number(spaceData.value.maxCount),
     maxSizeMb: Number((spaceData.value.maxSize / 1024 / 1024).toFixed(2)),
   })
   editing.value = true
@@ -76,7 +76,7 @@ function startEdit() {
 function handleLevelChange(value: number) {
   const level = levelList.value.find((item) => item.value === value)
   if (!level) return
-  spaceForm.maxCount = level.maxCount
+  spaceForm.maxCount = Number(level.maxCount)
   spaceForm.maxSizeMb = Number((level.maxSize / 1024 / 1024).toFixed(2))
 }
 
