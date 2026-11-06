@@ -10,6 +10,8 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ylh.picturego.api.imagesearch.ImageSearchApiFacade;
+import com.ylh.picturego.api.imagesearch.model.ImageSearchResult;
 import com.ylh.picturego.exception.BusinessException;
 import com.ylh.picturego.exception.ErrorCode;
 import com.ylh.picturego.exception.ThrowUtils;
@@ -675,6 +677,19 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture> impl
             );
         }
 
+    }
+
+    @Override
+    public List<ImageSearchResult> searchPictureByPicture(SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        // 获取图片id
+        Long pictureId = searchPictureByPictureRequest.getPictureId();
+        ThrowUtils.throwException(pictureId == null, ErrorCode.PARAMS_ERROR, "图片id为空");
+        // 获取图片对象
+        Picture picture = this.getPictureById(pictureId);
+        ThrowUtils.throwException(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 调用图片搜索接口
+        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(picture.getUrl());
+        return resultList;
     }
 }
 

@@ -2,6 +2,7 @@ package com.ylh.picturego.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ylh.picturego.annotation.AuthCheck;
+import com.ylh.picturego.api.imagesearch.model.ImageSearchResult;
 import com.ylh.picturego.common.DeleteRequest;
 import com.ylh.picturego.common.Result;
 import com.ylh.picturego.common.ResultUtils;
@@ -19,6 +20,8 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/picture")
@@ -216,5 +219,16 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         pictureService.reviewPicture(pictureReviewRequest, loginUser);
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 根据图片搜索图片
+     * @param searchPictureByPictureRequest 图片搜索请求
+     * @return 图片搜索结果
+     */
+    @PostMapping("/search/picture")
+    public Result<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        ThrowUtils.throwException(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(pictureService.searchPictureByPicture(searchPictureByPictureRequest));
     }
 }

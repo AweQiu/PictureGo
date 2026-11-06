@@ -16,9 +16,11 @@ springdoc:
     path: /v3/api-docs
   group-configs:
     - group: 'default'
-      display-name: 默认分组
-      paths-to-match: '/**'
-      packages-to-scan: com.ylh.picturego.controller
+      display-name: 后端接口
+      paths-to-match:
+        - '/**'
+      packages-to-scan:
+        - com.ylh.picturego.controller
 
 # knife4j的增强配置，不需要增强可以不配
 knife4j:

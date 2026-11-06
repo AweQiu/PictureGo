@@ -2,7 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Modal, message } from 'ant-design-vue'
-import { CloudUploadOutlined, DeleteOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import {
+  CloudUploadOutlined,
+  DeleteOutlined,
+  DownOutlined,
+  EditOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue'
 import {
   deletePicture,
   editPicture,
@@ -71,7 +77,22 @@ const pictureList = ref<PictureVO[]>([])
 const listLoading = ref(false)
 const total = ref(0)
 const pagination = reactive({ current: 1, pageSize: 12 })
-const searchText = ref('')
+const filtersVisible = ref(false)
+const queryForm = reactive({
+  searchText: '',
+  category: undefined as string | undefined,
+  tags: [] as string[],
+  editTimeRange: [] as string[],
+  picWidth: undefined as number | undefined,
+  picHeight: undefined as number | undefined,
+  picFormat: '',
+})
+
+function toIsoDateTime(value?: string) {
+  if (!value) return undefined
+  const date = new Date(value.replace(' ', 'T'))
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+}
 
 async function fetchPictures() {
   if (!space.value) return
@@ -81,7 +102,14 @@ async function fetchPictures() {
       current: pagination.current,
       pageSize: pagination.pageSize,
       spaceId: space.value.id,
-      searchText: searchText.value.trim() || undefined,
+      searchText: queryForm.searchText.trim() || undefined,
+      category: queryForm.category?.trim() || undefined,
+      tags: queryForm.tags.length > 0 ? queryForm.tags : undefined,
+      startEditTime: toIsoDateTime(queryForm.editTimeRange[0]),
+      endEditTime: toIsoDateTime(queryForm.editTimeRange[1]),
+      picWidth: queryForm.picWidth,
+      picHeight: queryForm.picHeight,
+      picFormat: queryForm.picFormat.trim() || undefined,
     })
     pictureList.value = page.records ?? []
     total.value = Number(page.total ?? 0)
@@ -95,6 +123,19 @@ async function fetchPictures() {
 function handleSearch() {
   pagination.current = 1
   fetchPictures()
+}
+
+function handleReset() {
+  Object.assign(queryForm, {
+    searchText: '',
+    category: undefined,
+    tags: [],
+    editTimeRange: [],
+    picWidth: undefined,
+    picHeight: undefined,
+    picFormat: '',
+  })
+  handleSearch()
 }
 
 function handlePageChange(page: number, pageSize: number) {
@@ -327,20 +368,96 @@ onMounted(async () => {
     </a-card>
 
     <a-card v-if="space" :bordered="false" class="picture-card">
-      <div class="list-toolbar">
-        <a-input
-          v-model:value="searchText"
-          class="toolbar-search"
-          placeholder="搜索空间内图片名称 / 简介"
-          allow-clear
-          @press-enter="handleSearch"
-        >
-          <template #prefix>
-            <SearchOutlined />
-          </template>
-        </a-input>
-        <a-button type="primary" @click="handleSearch">搜索</a-button>
-      </div>
+      <a-form layout="vertical" class="query-form">
+        <div class="query-primary-row">
+          <a-form-item label="名称 / 简介" class="query-name">
+            <a-input
+              v-model:value="queryForm.searchText"
+              placeholder="输入名称或简介关键词"
+              allow-clear
+              @press-enter="handleSearch"
+            >
+              <template #prefix>
+                <SearchOutlined />
+              </template>
+            </a-input>
+          </a-form-item>
+          <div class="query-primary-actions">
+            <a-button type="primary" @click="handleSearch">搜索</a-button>
+          </div>
+        </div>
+        <div class="filter-toggle-row">
+          <a-button
+            class="filter-toggle"
+            :aria-expanded="filtersVisible"
+            @click="filtersVisible = !filtersVisible"
+          >
+            筛选
+            <DownOutlined class="filter-toggle-icon" :class="{ 'is-open': filtersVisible }" />
+          </a-button>
+        </div>
+        <div v-if="filtersVisible" class="query-grid">
+          <a-form-item label="分类">
+            <a-select
+              v-model:value="queryForm.category"
+              placeholder="选择分类"
+              show-search
+              option-filter-prop="label"
+              :options="categoryOptions.map((item) => ({ value: item, label: item }))"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="标签">
+            <a-select
+              v-model:value="queryForm.tags"
+              mode="multiple"
+              placeholder="选择标签"
+              :options="tagOptions.map((item) => ({ value: item, label: item }))"
+              :max-tag-count="2"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="最后编辑时间" class="query-time">
+            <a-range-picker
+              v-model:value="queryForm.editTimeRange"
+              :show-time="{ format: 'HH:mm:ss' }"
+              format="YYYY-MM-DD HH:mm:ss"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              :placeholder="['开始时间', '结束时间']"
+              class="query-range"
+            />
+          </a-form-item>
+          <a-form-item label="宽度（px）">
+            <a-input-number
+              v-model:value="queryForm.picWidth"
+              :min="1"
+              :precision="0"
+              placeholder="精确宽度"
+              class="query-number"
+            />
+          </a-form-item>
+          <a-form-item label="高度（px）">
+            <a-input-number
+              v-model:value="queryForm.picHeight"
+              :min="1"
+              :precision="0"
+              placeholder="精确高度"
+              class="query-number"
+            />
+          </a-form-item>
+          <a-form-item label="格式">
+            <a-input
+              v-model:value="queryForm.picFormat"
+              placeholder="例如 webp、jpg、png"
+              allow-clear
+              @press-enter="handleSearch"
+            />
+          </a-form-item>
+          <div class="query-actions">
+            <a-button @click="handleReset">重置</a-button>
+          </div>
+        </div>
+      </a-form>
 
       <a-spin :spinning="listLoading">
         <div v-if="pictureList.length > 0" class="gallery-grid">
@@ -555,14 +672,67 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.list-toolbar {
-  display: flex;
-  gap: 12px;
+.query-form {
   margin-bottom: 16px;
 }
 
-.toolbar-search {
-  max-width: 360px;
+.query-primary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+}
+
+.query-primary-row .query-name {
+  margin-bottom: 0;
+}
+
+.query-primary-actions {
+  display: flex;
+  padding-top: 30px;
+}
+
+.filter-toggle-row {
+  display: flex;
+  margin: 12px 0 16px;
+}
+
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-toggle-icon {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.filter-toggle-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.query-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0 16px;
+}
+
+.query-time {
+  grid-column: span 2;
+}
+
+.query-range,
+.query-number {
+  width: 100%;
+}
+
+.query-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 30px;
+  margin-bottom: 24px;
 }
 
 .gallery-grid {
@@ -821,6 +991,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
+  .query-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .edit-body {
     flex-direction: column;
   }
@@ -828,6 +1002,31 @@ onMounted(async () => {
   .edit-preview {
     flex: none;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .query-primary-row,
+  .query-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .query-primary-row {
+    gap: 0;
+  }
+
+  .query-primary-actions {
+    justify-content: flex-end;
+    padding-top: 0;
+    margin-top: 12px;
+  }
+
+  .query-time {
+    grid-column: span 1;
+  }
+
+  .query-actions {
+    padding-top: 0;
   }
 }
 </style>

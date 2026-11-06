@@ -165,6 +165,8 @@ interface PictureQueryRequest {
   searchText?: string
   userId?: number | string
   spaceId?: number | string
+  startEditTime?: string
+  endEditTime?: string
 }
 
 interface PictureEditRequest {

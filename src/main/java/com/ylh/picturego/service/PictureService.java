@@ -3,11 +3,14 @@ package com.ylh.picturego.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.ylh.picturego.api.imagesearch.model.ImageSearchResult;
 import com.ylh.picturego.model.dto.picture.*;
 import com.ylh.picturego.model.entity.Picture;
 import com.ylh.picturego.model.entity.User;
 import com.ylh.picturego.model.vo.PictureTagCategory;
 import com.ylh.picturego.model.vo.PictureVO;
+
+import java.util.List;
 
 /**
 * @author V0411
@@ -153,4 +156,6 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser 登录用户
      */
     void checkPictureAuth(Picture picture, User loginUser);
+
+    List<ImageSearchResult> searchPictureByPicture(SearchPictureByPictureRequest searchPictureByPictureRequest);
 }
